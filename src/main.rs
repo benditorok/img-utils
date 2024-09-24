@@ -15,7 +15,7 @@ fn main() -> anyhow::Result<()> {
     let image = image::open(&in_image_path)?;
 
     // Invert the image using the CUDA library
-    let inverted_image = callcuda_rs::invert_image(&libcudaimg, &image)?;
+    let inverted_image = cuda_imgproc::invert_image(&libcudaimg, &image)?;
 
     // Save the modified image
     inverted_image

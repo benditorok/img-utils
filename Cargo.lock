@@ -127,16 +127,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8f1fe948ff07f4bd06c30984e69f5b4899c516a3ef74f34df92a2df2ab535495"
 
 [[package]]
-name = "callcuda-rs"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "fs_extra",
- "image",
- "libloading",
-]
-
-[[package]]
 name = "cc"
 version = "1.1.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -208,6 +198,16 @@ name = "crunchy"
 version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7a81dae078cea95a014a339291cec439d2f232ebe854a9d672b796c6afafa9b7"
+
+[[package]]
+name = "cuda-imgproc"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "fs_extra",
+ "image",
+ "libloading",
+]
 
 [[package]]
 name = "either"
