@@ -7,10 +7,14 @@ fn main() -> anyhow::Result<()> {
     let libcudaimg = unsafe { Library::new(lib_path)? };
     let base_path = std::env::current_dir()?;
 
+    // Load the image from the 'data' directory
     let in_image_path = base_path.join("data/ship.jpg");
     let out_image_path = base_path.join("data/ship_inverted.jpg");
 
+    // Load the image using the image crate
     let image = image::open(&in_image_path)?;
+
+    // Invert the image using the CUDA library
     let inverted_image = callcuda_rs::invert_image(&libcudaimg, &image)?;
 
     // Save the modified image
