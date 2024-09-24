@@ -3,7 +3,7 @@ use libloading::{Library, Symbol};
 use std::{env, ffi::c_void, path::Path};
 
 // Define the signature for the processImage function
-type InvertImageFn = unsafe extern "C" fn(image: *mut u8, width: u32, height: u32, len: u32);
+type InvertImageFn = unsafe extern "C" fn(image: *mut u8, image_len: u32, width: u32, height: u32);
 
 fn main() -> anyhow::Result<()> {
     let lib_path = Path::new(env!("OUT_DIR")).join("data/libcudaimg.dll");
@@ -22,14 +22,18 @@ fn main() -> anyhow::Result<()> {
     let mut img_asbytes = img_rgb8.as_raw().to_owned();
     let width: u32 = img_rgb8.width();
     let height: u32 = img_rgb8.height();
-    let raw_len: u32 = img_asbytes.len() as u32;
 
-    println!("witdh: {}, height: {}", width, height);
+    println!("Image width: {}, height: {}", width, height);
 
     // Call the processImage function (invert the image)
     unsafe {
         // Note: the width * 3 is used because the image is in RGB format, which means that each pixel has 3 bytes (R, G, B)
-        process_image(img_asbytes.as_mut_ptr(), width * 3, height, raw_len);
+        process_image(
+            img_asbytes.as_mut_ptr(),
+            img_asbytes.len() as u32,
+            width * 3,
+            height,
+        );
     }
 
     // Save the modified image
