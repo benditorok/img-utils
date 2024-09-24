@@ -3,27 +3,11 @@ use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 
 fn main() -> anyhow::Result<()> {
-    print!("Image to modify(./data/{{img_name.ext}}): ");
+    // Get the image path from the user
+    let image_path = get_image_path()?;
 
-    // Read the image name from the user
-    let mut image_name = String::new();
-    io::stdout().flush()?;
-    io::stdin().read_line(&mut image_name)?;
-
-    // Split the image name into name and extension
-    let image_path = Path::new(image_name.trim());
-    let image_name = image_path
-        .file_stem()
-        .expect("Invalid image name")
-        .to_str()
-        .expect("Invalid image name")
-        .to_owned();
-    let image_ext = image_path
-        .extension()
-        .expect("Invalid image extension")
-        .to_str()
-        .expect("Invalid image extension")
-        .to_owned();
+    // Split the image path into name and extension
+    let (image_name, image_ext) = split_image_path(&image_path)?;
 
     // Load the libcudaimg library
     let lib_path = Path::new("data/libcudaimg.dll");
@@ -48,4 +32,32 @@ fn main() -> anyhow::Result<()> {
 
     // The Library will be automatically unloaded when it goes out of scope
     Ok(())
+}
+
+fn get_image_path() -> anyhow::Result<PathBuf> {
+    print!("Image to modify(./data/{{img_name.ext}}): ");
+
+    // Read the image name from the user
+    let mut image_name = String::new();
+    io::stdout().flush()?;
+    io::stdin().read_line(&mut image_name)?;
+
+    Ok(Path::new(image_name.trim()).to_path_buf())
+}
+
+fn split_image_path(image_path: &Path) -> anyhow::Result<(String, String)> {
+    let image_name = image_path
+        .file_stem()
+        .expect("Invalid image name")
+        .to_str()
+        .expect("Invalid image name")
+        .to_owned();
+    let image_ext = image_path
+        .extension()
+        .expect("Invalid image extension")
+        .to_str()
+        .expect("Invalid image extension")
+        .to_owned();
+
+    Ok((image_name, image_ext))
 }

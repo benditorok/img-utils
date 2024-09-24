@@ -1,6 +1,5 @@
 use image::DynamicImage;
 use libloading::{Library, Symbol};
-use std::{env, path::Path};
 
 pub fn invert_image(libcudaimg: &Library, image: &DynamicImage) -> anyhow::Result<DynamicImage> {
     // Define the signature for the processImage function
