@@ -1,0 +1,3 @@
+[submodule "libcudaimg"]
+	path = libcudaimg
+	url = https://github.com/benditorok/libcudaimg
