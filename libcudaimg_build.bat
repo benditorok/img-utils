@@ -33,6 +33,9 @@ if %errorlevel% neq 0 (
 
 :: Copy the DLL to the data folder
 echo Copying libcudaimg.dll to data folder...
+if not exist "%~dp0\data" (
+    mkdir "%~dp0\data"
+)
 copy /y "%~dp0\libcudaimg\%ARCH%\%CONFIG%\libcudaimg.dll" "%~dp0\data\"
 
 :: Check if the copy was successful
