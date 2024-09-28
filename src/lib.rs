@@ -1,3 +1,4 @@
+use egui::{ColorImage, ScrollArea, TextureHandle};
 use image::DynamicImage;
 use libloading::{Library, Symbol};
 
@@ -32,4 +33,20 @@ pub fn get_image_data(image: &DynamicImage) -> ImageData {
         height: img_rgb8.height(),
         pixel_size: 3, // RGB format (3 bytes per pixel)
     }
+}
+
+pub fn dynamic_image_to_color_image(img: &DynamicImage) -> ColorImage {
+    let rgba_image = img.to_rgba8();
+    let size = [img.width() as usize, img.height() as usize];
+    let pixels: Vec<_> = rgba_image
+        .pixels()
+        .map(|p| egui::Color32::from_rgba_unmultiplied(p[0], p[1], p[2], p[3]))
+        .collect();
+    ColorImage { size, pixels }
+}
+
+pub fn display_image_in_ui(ui: &mut egui::Ui, texture: &TextureHandle) {
+    ScrollArea::both().show(ui, |ui| {
+        ui.image(texture);
+    });
 }

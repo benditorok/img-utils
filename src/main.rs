@@ -1,40 +1,131 @@
 use cuda_imgproc::cudaimg;
+use egui::{TextureHandle, TextureOptions};
+use image::DynamicImage;
 use libloading::Library;
+use rfd::FileDialog;
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 
 fn main() -> anyhow::Result<()> {
     env_logger::init();
 
-    // Get the image path from the user
-    let image_path = get_image_path()?;
-
-    // Split the image path into name and extension
-    let (image_name, image_ext) = split_image_path(&image_path)?;
-
     // Load the libcudaimg library
     let lib_path = Path::new("data/libcudaimg.dll");
     let libcudaimg = unsafe { Library::new(lib_path)? };
-    let base_path = std::env::current_dir()?;
+    //let base_path = std::env::current_dir()?;
 
-    // Load the image from the 'data' directory
-    let in_image_path = base_path.join(format!("data/{}.{}", &image_name, &image_ext));
-    let out_image_path = base_path.join(format!("data/{}_inverted.{}", &image_name, &image_ext));
+    let options = eframe::NativeOptions::default();
+    eframe::run_native(
+        "License Plate Extractor",
+        options,
+        Box::new(|_cc| {
+            //egui_extras::install_image_loaders(&cc.egui_ctx);
+            Ok(Box::new(MyApp::new(libcudaimg)))
+        }),
+    );
 
-    // Load the image using the image crate
-    let image = image::open(&in_image_path)?;
+    // // Get the image path from the user
+    // let image_path = get_image_path()?;
 
-    // Invert the image using the CUDA library
-    let inverted_image = cudaimg::invert_image(&libcudaimg, &image)?;
+    // // Split the image path into name and extension
+    // let (image_name, image_ext) = split_image_path(&image_path)?;
 
-    // Save the modified image
-    inverted_image
-        .save(&out_image_path)
-        .expect("Failed to save the modified image");
-    println!("Image inverted and saved to {:?}", &out_image_path);
+    // // Load the image from the 'data' directory
+    // let in_image_path = base_path.join(format!("data/{}.{}", &image_name, &image_ext));
+    // let out_image_path = base_path.join(format!("data/{}_inverted.{}", &image_name, &image_ext));
+
+    // // Load the image using the image crate
+    // let image = image::open(&in_image_path)?;
+
+    // // Invert the image using the CUDA library
+    // let inverted_image = cudaimg::invert_image(&libcudaimg, &image)?;
+
+    // // Save the modified image
+    // inverted_image
+    //     .save(&out_image_path)
+    //     .expect("Failed to save the modified image");
+    // println!("Image inverted and saved to {:?}", &out_image_path);
 
     // The Library will be automatically unloaded when it goes out of scope
     Ok(())
+}
+
+struct MyApp {
+    libcudaimg: Library,
+    image_path: Option<String>,
+    modified_image_path: Option<String>,
+    image: Option<DynamicImage>,
+    modified_image: Option<DynamicImage>,
+}
+
+impl MyApp {
+    fn new(libcudaimg: Library) -> Self {
+        Self {
+            libcudaimg,
+            image_path: None,
+            modified_image_path: None,
+            image: None,
+            modified_image: None,
+        }
+    }
+}
+
+impl eframe::App for MyApp {
+    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        egui::CentralPanel::default().show(ctx, |ui| {
+            ui.label("License Plate Extractor");
+
+            if ui.button("Select Image").clicked() {
+                if let Some(path) = FileDialog::new()
+                    .add_filter("Image Files", &["jpg", "jpeg", "png"])
+                    .pick_file()
+                {
+                    self.image_path = Some(path.display().to_string());
+                }
+
+                if let Some(image_path) = &self.image_path {
+                    let image = image::open(image_path).expect("Failed to open image");
+                    self.image = Some(image);
+                    ctx.request_repaint();
+                }
+            }
+
+            ui.horizontal(|ui| {
+                ui.label("Image Path:");
+
+                if let Some(image_path) = &self.image_path {
+                    ui.label(image_path);
+                } else {
+                    ui.label("No image selected");
+                }
+            });
+
+            if ui.button("Invert image").clicked() {
+                if let Some(image) = &self.image {
+                    let modified_image = cudaimg::invert_image(&self.libcudaimg, image)
+                        .expect("Failed to invert image");
+                    self.modified_image = Some(modified_image);
+                    ctx.request_repaint();
+                }
+            }
+
+            if let Some(image) = &self.image {
+                let img = cuda_imgproc::dynamic_image_to_color_image(&image);
+                let texture: TextureHandle =
+                    ui.ctx()
+                        .load_texture("image", img, TextureOptions::default());
+                ui.image(&texture);
+            }
+
+            if let Some(modified_image) = &self.modified_image {
+                let img = cuda_imgproc::dynamic_image_to_color_image(&modified_image);
+                let texture: TextureHandle =
+                    ui.ctx()
+                        .load_texture("image", img, TextureOptions::default());
+                ui.image(&texture);
+            }
+        });
+    }
 }
 
 fn get_image_path() -> anyhow::Result<PathBuf> {
