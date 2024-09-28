@@ -12,10 +12,9 @@ fn main() -> anyhow::Result<()> {
     // Load the libcudaimg library
     let lib_path = Path::new("data/libcudaimg.dll");
     let libcudaimg = unsafe { Library::new(lib_path)? };
-    //let base_path = std::env::current_dir()?;
 
     let options = eframe::NativeOptions::default();
-    eframe::run_native(
+    let _ = eframe::run_native(
         "License Plate Extractor",
         options,
         Box::new(|_cc| {
@@ -23,6 +22,8 @@ fn main() -> anyhow::Result<()> {
             Ok(Box::new(MyApp::new(libcudaimg)))
         }),
     );
+
+    Ok(())
 
     // // Get the image path from the user
     // let image_path = get_image_path()?;
@@ -47,7 +48,6 @@ fn main() -> anyhow::Result<()> {
     // println!("Image inverted and saved to {:?}", &out_image_path);
 
     // The Library will be automatically unloaded when it goes out of scope
-    Ok(())
 }
 
 struct MyApp {
