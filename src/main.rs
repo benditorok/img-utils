@@ -75,22 +75,24 @@ impl eframe::App for MyApp {
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.label("License Plate Extractor");
 
-            if ui.button("Select Image").clicked() {
-                if let Some(path) = FileDialog::new()
-                    .add_filter("Image Files", &["jpg", "jpeg", "png"])
-                    .pick_file()
-                {
-                    self.image_path = Some(path.display().to_string());
-                }
-
-                if let Some(image_path) = &self.image_path {
-                    let image = image::open(image_path).expect("Failed to open image");
-                    self.image = Some(image);
-                    ctx.request_repaint();
-                }
-            }
-
             ui.horizontal(|ui| {
+                // Select image button
+                if ui.button("Select Image").clicked() {
+                    if let Some(path) = FileDialog::new()
+                        .add_filter("Image Files", &["jpg", "jpeg", "png"])
+                        .pick_file()
+                    {
+                        self.image_path = Some(path.display().to_string());
+                    }
+
+                    if let Some(image_path) = &self.image_path {
+                        let image = image::open(image_path).expect("Failed to open image");
+                        self.image = Some(image);
+                        ctx.request_repaint();
+                    }
+                }
+
+                // Display the image path
                 ui.label("Image Path:");
 
                 if let Some(image_path) = &self.image_path {
@@ -109,21 +111,23 @@ impl eframe::App for MyApp {
                 }
             }
 
-            if let Some(image) = &self.image {
-                let img = cuda_imgproc::dynamic_image_to_color_image(&image);
-                let texture: TextureHandle =
-                    ui.ctx()
-                        .load_texture("image", img, TextureOptions::default());
-                ui.image(&texture);
-            }
+            ui.horizontal(|ui| {
+                if let Some(image) = &self.image {
+                    let img = cuda_imgproc::dynamic_image_to_color_image(&image);
+                    let texture: TextureHandle =
+                        ui.ctx()
+                            .load_texture("image", img, TextureOptions::default());
+                    ui.image(&texture);
+                }
 
-            if let Some(modified_image) = &self.modified_image {
-                let img = cuda_imgproc::dynamic_image_to_color_image(&modified_image);
-                let texture: TextureHandle =
-                    ui.ctx()
-                        .load_texture("image", img, TextureOptions::default());
-                ui.image(&texture);
-            }
+                if let Some(modified_image) = &self.modified_image {
+                    let img = cuda_imgproc::dynamic_image_to_color_image(&modified_image);
+                    let texture: TextureHandle =
+                        ui.ctx()
+                            .load_texture("image", img, TextureOptions::default());
+                    ui.image(&texture);
+                }
+            });
         });
     }
 }
