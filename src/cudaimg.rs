@@ -1,5 +1,6 @@
 use image::DynamicImage;
 use libloading::{Library, Symbol};
+use log::info;
 
 /// Definition of the processImage function from libcudaimg
 type InvertImageFn = unsafe extern "C" fn(image: *mut u8, image_len: u32, width: u32, height: u32);
@@ -11,11 +12,10 @@ pub fn invert_image(libcudaimg: &Library, image: &DynamicImage) -> anyhow::Resul
     // Get the image data
     let mut img = crate::get_image_data(&image);
 
-    println!("Image width: {}, height: {}", img.width, img.height);
+    info!("Image width: {}, height: {}", img.width, img.height);
 
     // Call the processImage function (invert the image)
     unsafe {
-        // Note: the width * 3 is used because the image is in RGB format, which means that each pixel has 3 bytes (R, G, B)
         process_image(
             img.bytes.as_mut_ptr(),
             img.raw_len,

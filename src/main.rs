@@ -4,6 +4,8 @@ use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 
 fn main() -> anyhow::Result<()> {
+    env_logger::init();
+
     // Get the image path from the user
     let image_path = get_image_path()?;
 
