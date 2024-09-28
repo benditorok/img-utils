@@ -73,7 +73,7 @@ impl MyApp {
 impl eframe::App for MyApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
-            ui.label("License Plate Extractor");
+            ui.label("Photoshop");
 
             ui.horizontal(|ui| {
                 // Select image button
