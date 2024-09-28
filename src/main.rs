@@ -112,21 +112,25 @@ impl eframe::App for MyApp {
             }
 
             ui.horizontal(|ui| {
-                if let Some(image) = &self.image {
-                    let img = cuda_imgproc::dynamic_image_to_color_image(&image);
-                    let texture: TextureHandle =
-                        ui.ctx()
-                            .load_texture("image", img, TextureOptions::default());
-                    ui.image(&texture);
-                }
+                // Get the available width of the panel
+                let available_width = ui.available_width();
+                let half_width = available_width / 2.0;
 
-                if let Some(modified_image) = &self.modified_image {
-                    let img = cuda_imgproc::dynamic_image_to_color_image(&modified_image);
-                    let texture: TextureHandle =
-                        ui.ctx()
-                            .load_texture("image", img, TextureOptions::default());
-                    ui.image(&texture);
-                }
+                ui.vertical(|ui| {
+                    ui.set_width(half_width);
+
+                    if let Some(image) = &self.image {
+                        cuda_imgproc::display_image_in_ui(ui, image, 1);
+                    }
+                });
+
+                ui.vertical(|ui| {
+                    ui.set_width(half_width);
+
+                    if let Some(modified_image) = &self.modified_image {
+                        cuda_imgproc::display_image_in_ui(ui, modified_image, 2);
+                    }
+                });
             });
         });
     }
