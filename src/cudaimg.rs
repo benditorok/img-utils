@@ -79,3 +79,39 @@ pub fn invert_image(libcudaimg: &Library, image: &DynamicImage) -> anyhow::Resul
 
     Ok(inverted_image)
 }
+
+/// Definition of the gammaTransformImage function from libcudaimg
+type GammaTransformImage =
+    unsafe extern "C" fn(image: *mut u8, image_len: u32, width: u32, height: u32);
+
+pub fn gamma_transform_image(
+    libcudaimg: &Library,
+    image: &DynamicImage,
+) -> anyhow::Result<DynamicImage> {
+    // Get the invertImage function from the library
+    let process_image: Symbol<GammaTransformImage> =
+        unsafe { libcudaimg.get(b"gammaTransformImage\0")? };
+
+    // Get the image data
+    let mut img = image.to_cuda_image_data();
+
+    info!("Image width: {}, height: {}", img.width, img.height);
+
+    // Call the processImage function (invert the image)
+    unsafe {
+        process_image(
+            img.bytes.as_mut_ptr(),
+            img.raw_len,
+            img.width * img.pixel_size,
+            img.height,
+        );
+    }
+
+    // Create a new image from the modified bytes
+    let modified_image = image::DynamicImage::ImageRgb8(
+        image::RgbImage::from_raw(img.width, img.height, img.bytes)
+            .expect("Failed to create the modified image from bytes"),
+    );
+
+    Ok(modified_image)
+}

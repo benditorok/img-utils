@@ -2,6 +2,7 @@ use egui::TextureHandle;
 use image::DynamicImage;
 use img_utils::{ShowResizedTexture, ToColorImage};
 use libloading::Library;
+use log::info;
 use rfd::FileDialog;
 use std::path::Path;
 
@@ -26,7 +27,7 @@ fn main() -> anyhow::Result<()> {
 }
 
 #[derive(Default)]
-struct ImageMap {
+struct TextureMap {
     pub original_image: Option<TextureHandle>,
     pub modified_image: Option<TextureHandle>,
 }
@@ -38,7 +39,7 @@ struct MyApp {
     modified_image_path: Option<String>,
     image: Option<DynamicImage>,
     modified_image: Option<DynamicImage>,
-    image_map: ImageMap,
+    texture_map: TextureMap,
 }
 
 impl MyApp {
@@ -49,7 +50,7 @@ impl MyApp {
             modified_image_path: None,
             image: None,
             modified_image: None,
-            image_map: ImageMap::default(),
+            texture_map: TextureMap::default(),
         }
     }
 }
@@ -69,7 +70,7 @@ impl eframe::App for MyApp {
                         self.image_path = Some(path.display().to_string());
                         self.image = None;
                         self.modified_image = None;
-                        self.image_map = ImageMap::default();
+                        self.texture_map = TextureMap::default();
                     }
 
                     if self.image.is_none() {
@@ -93,15 +94,36 @@ impl eframe::App for MyApp {
             // Image processing tools
             ui.horizontal(|ui| {
                 // Invert image button
-                if ui.button("Invert image").clicked() && self.modified_image.is_none() {
+                if ui.button("Invert image").clicked() {
+                    self.texture_map.modified_image = None;
+
                     if let Some(image) = &self.image {
+                        let start = std::time::Instant::now();
                         let modified_image =
                             img_utils::cudaimg::invert_image(&self.libcudaimg, image)
                                 .expect("Failed to invert image");
+                        let duration = start.elapsed();
+                        info!("Invert image duration: {:?}", duration);
+
                         self.modified_image = Some(modified_image);
                     }
                 }
 
+                // Gamma transform image button
+                if ui.button("Gamma transformation").clicked() {
+                    self.texture_map.modified_image = None;
+
+                    if let Some(image) = &self.image {
+                        let start = std::time::Instant::now();
+                        let modified_image =
+                            img_utils::cudaimg::gamma_transform_image(&self.libcudaimg, image)
+                                .expect("Failed to use Gamma transformation on image");
+                        let duration = start.elapsed();
+                        info!("Gamma transformation duration: {:?}", duration);
+
+                        self.modified_image = Some(modified_image);
+                    }
+                }
                 // ... other image processing tools
             });
 
@@ -119,7 +141,7 @@ impl eframe::App for MyApp {
 
                     if let Some(image) = &self.image {
                         let texture: &egui::TextureHandle =
-                            self.image_map.original_image.get_or_insert_with(|| {
+                            self.texture_map.original_image.get_or_insert_with(|| {
                                 // Load the texture only once.
                                 ui.ctx().load_texture(
                                     "image_original",
@@ -145,7 +167,7 @@ impl eframe::App for MyApp {
 
                     if let Some(modified_image) = &self.modified_image {
                         let texture: &egui::TextureHandle =
-                            self.image_map.modified_image.get_or_insert_with(|| {
+                            self.texture_map.modified_image.get_or_insert_with(|| {
                                 // Load the texture only once.
                                 ui.ctx().load_texture(
                                     "image_modified",
