@@ -17,7 +17,7 @@ fn main() -> anyhow::Result<()> {
 
     let options = eframe::NativeOptions::default();
     let _ = eframe::run_native(
-        "Photoshop",
+        "Image Processing Utility",
         options,
         Box::new(|_cc| {
             //egui_extras::install_image_loaders(&cc.egui_ctx);
@@ -34,6 +34,7 @@ struct ImageMap {
     pub modified_image: Option<TextureHandle>,
 }
 
+#[allow(unused)]
 struct MyApp {
     libcudaimg: Library,
     image_path: Option<String>,
@@ -78,7 +79,6 @@ impl eframe::App for MyApp {
                         if let Some(image_path) = &self.image_path {
                             let image = image::open(image_path).expect("Failed to open image");
                             self.image = Some(image);
-                            ctx.request_repaint();
                         }
                     }
                 }
@@ -95,16 +95,16 @@ impl eframe::App for MyApp {
 
             // Image processing tools
             ui.horizontal(|ui| {
-                if ui.button("Invert image").clicked() {
-                    if self.modified_image.is_none() {
-                        if let Some(image) = &self.image {
-                            let modified_image = cudaimg::invert_image(&self.libcudaimg, image)
-                                .expect("Failed to invert image");
-                            self.modified_image = Some(modified_image);
-                            ctx.request_repaint();
-                        }
+                // Invert image button
+                if ui.button("Invert image").clicked() && self.modified_image.is_none() {
+                    if let Some(image) = &self.image {
+                        let modified_image = cudaimg::invert_image(&self.libcudaimg, image)
+                            .expect("Failed to invert image");
+                        self.modified_image = Some(modified_image);
                     }
                 }
+
+                // ... other image processing tools
             });
 
             // Display the images side by side
