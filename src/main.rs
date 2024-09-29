@@ -1,4 +1,4 @@
-use cuda_imgproc::{cudaimg, ToColorImage, ToImageSource};
+use cuda_imgproc::{cudaimg, ShowResizedTexture, ToColorImage, ToImageSource};
 use egui::{Response, ScrollArea, TextureHandle, TextureOptions};
 use image::DynamicImage;
 use libloading::Library;
@@ -103,13 +103,14 @@ impl eframe::App for MyApp {
 
             // Display the images side by side
             ui.horizontal(|ui| {
+                ui.set_height(available_height);
+
                 // Get the available width of the panel
                 let available_width = ui.available_width();
                 let half_width = available_width / 2.0;
 
                 ui.vertical(|ui| {
                     ui.set_width(half_width);
-                    ui.set_height(available_height);
 
                     if let Some(image) = &self.image {
                         let texture: &egui::TextureHandle =
@@ -122,17 +123,18 @@ impl eframe::App for MyApp {
                                 )
                             });
 
-                        ScrollArea::both()
-                            .id_source("scroll_area_original")
-                            .show(ui, |ui| {
-                                ui.image(texture);
-                            });
+                        ui.show_resized_texture(texture, "original");
+
+                        // ScrollArea::both()
+                        //     .id_source("scroll_area_original")
+                        //     .show(ui, |ui| {
+                        //         ui.image(texture);
+                        //     });
                     }
                 });
 
                 ui.vertical(|ui| {
                     ui.set_width(half_width);
-                    ui.set_height(available_height);
 
                     if let Some(modified_image) = &self.modified_image {
                         let texture: &egui::TextureHandle =
@@ -145,11 +147,13 @@ impl eframe::App for MyApp {
                                 )
                             });
 
-                        ScrollArea::both()
-                            .id_source("scroll_area_modified")
-                            .show(ui, |ui| {
-                                ui.image(texture);
-                            });
+                        ui.show_resized_texture(texture, "modified");
+
+                        // ScrollArea::both()
+                        //     .id_source("scroll_area_modified")
+                        //     .show(ui, |ui| {
+                        //         ui.image(texture);
+                        //     });
                     }
                 });
             });
