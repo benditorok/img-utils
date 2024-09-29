@@ -1,12 +1,9 @@
-use egui::{Response, ScrollArea, TextureHandle, TextureOptions};
+use egui::TextureHandle;
 use image::DynamicImage;
-use img_utils::{cudaimg, ShowResizedTexture, ToColorImage, ToImageSource};
+use img_utils::{ShowResizedTexture, ToColorImage};
 use libloading::Library;
-use log::{debug, info};
 use rfd::FileDialog;
-use std::io::{self, Write};
-use std::path::{Path, PathBuf};
-use std::sync::atomic::AtomicBool;
+use std::path::Path;
 
 fn main() -> anyhow::Result<()> {
     env_logger::init();
