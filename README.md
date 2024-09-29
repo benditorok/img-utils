@@ -1,6 +1,6 @@
-# cuda-imgproc
+# img-utils
 
-Image processing in Rust using a CUDA library.
+Image processing in Rust using [libcudaimg](https://github.com/benditorok/libcudaimg/tree/main).
 
 ## Build process
 
