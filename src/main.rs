@@ -1,5 +1,5 @@
 use cuda_imgproc::{cudaimg, ToColorImage, ToImageSource};
-use egui::{Response, TextureHandle, TextureOptions};
+use egui::{Response, ScrollArea, TextureHandle, TextureOptions};
 use image::DynamicImage;
 use libloading::Library;
 use log::{debug, info};
@@ -99,6 +99,8 @@ impl eframe::App for MyApp {
                 }
             }
 
+            let available_height = ui.available_height();
+
             // Display the images side by side
             ui.horizontal(|ui| {
                 // Get the available width of the panel
@@ -107,37 +109,47 @@ impl eframe::App for MyApp {
 
                 ui.vertical(|ui| {
                     ui.set_width(half_width);
+                    ui.set_height(available_height);
 
                     if let Some(image) = &self.image {
                         let texture: &egui::TextureHandle =
                             self.image_map.original_image.get_or_insert_with(|| {
                                 // Load the texture only once.
                                 ui.ctx().load_texture(
-                                    "original",
+                                    "image_original",
                                     image.to_color_image(),
                                     Default::default(),
                                 )
                             });
 
-                        ui.image(texture);
+                        ScrollArea::both()
+                            .id_source("scroll_area_original")
+                            .show(ui, |ui| {
+                                ui.image(texture);
+                            });
                     }
                 });
 
                 ui.vertical(|ui| {
                     ui.set_width(half_width);
+                    ui.set_height(available_height);
 
                     if let Some(modified_image) = &self.modified_image {
                         let texture: &egui::TextureHandle =
                             self.image_map.modified_image.get_or_insert_with(|| {
                                 // Load the texture only once.
                                 ui.ctx().load_texture(
-                                    "modified",
+                                    "image_modified",
                                     modified_image.to_color_image(),
                                     Default::default(),
                                 )
                             });
 
-                        ui.image(texture);
+                        ScrollArea::both()
+                            .id_source("scroll_area_modified")
+                            .show(ui, |ui| {
+                                ui.image(texture);
+                            });
                     }
                 });
             });
