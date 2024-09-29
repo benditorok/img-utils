@@ -82,11 +82,12 @@ pub fn invert_image(libcudaimg: &Library, image: &DynamicImage) -> anyhow::Resul
 
 /// Definition of the gammaTransformImage function from libcudaimg
 type GammaTransformImage =
-    unsafe extern "C" fn(image: *mut u8, image_len: u32, width: u32, height: u32);
+    unsafe extern "C" fn(image: *mut u8, image_len: u32, width: u32, height: u32, gamma: f32);
 
 pub fn gamma_transform_image(
     libcudaimg: &Library,
     image: &DynamicImage,
+    gamma: f32,
 ) -> anyhow::Result<DynamicImage> {
     // Get the invertImage function from the library
     let process_image: Symbol<GammaTransformImage> =
@@ -104,6 +105,7 @@ pub fn gamma_transform_image(
             img.raw_len,
             img.width * img.pixel_size,
             img.height,
+            gamma,
         );
     }
 

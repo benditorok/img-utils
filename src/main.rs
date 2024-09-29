@@ -32,6 +32,16 @@ struct TextureMap {
     pub modified_image: Option<TextureHandle>,
 }
 
+struct ImageModifiers {
+    pub gamma: f32,
+}
+
+impl Default for ImageModifiers {
+    fn default() -> Self {
+        Self { gamma: 2.2 }
+    }
+}
+
 #[allow(unused)]
 struct MyApp {
     libcudaimg: Library,
@@ -40,6 +50,7 @@ struct MyApp {
     image: Option<DynamicImage>,
     modified_image: Option<DynamicImage>,
     texture_map: TextureMap,
+    image_modifiers: ImageModifiers,
 }
 
 impl MyApp {
@@ -51,6 +62,7 @@ impl MyApp {
             image: None,
             modified_image: None,
             texture_map: TextureMap::default(),
+            image_modifiers: ImageModifiers::default(),
         }
     }
 }
@@ -109,21 +121,33 @@ impl eframe::App for MyApp {
                     }
                 }
 
-                // Gamma transform image button
-                if ui.button("Gamma transformation").clicked() {
-                    self.texture_map.modified_image = None;
+                ui.vertical(|ui| {
+                    // Gamma transform image button
+                    if ui.button("Gamma transformation").clicked() {
+                        self.texture_map.modified_image = None;
 
-                    if let Some(image) = &self.image {
-                        let start = std::time::Instant::now();
-                        let modified_image =
-                            img_utils::cudaimg::gamma_transform_image(&self.libcudaimg, image)
-                                .expect("Failed to use Gamma transformation on image");
-                        let duration = start.elapsed();
-                        info!("Gamma transformation duration: {:?}", duration);
+                        if let Some(image) = &self.image {
+                            let start = std::time::Instant::now();
+                            let modified_image = img_utils::cudaimg::gamma_transform_image(
+                                &self.libcudaimg,
+                                image,
+                                self.image_modifiers.gamma,
+                            )
+                            .expect("Failed to use Gamma transformation on image");
+                            let duration = start.elapsed();
+                            info!("Gamma transformation duration: {:?}", duration);
 
-                        self.modified_image = Some(modified_image);
+                            self.modified_image = Some(modified_image);
+                        }
                     }
-                }
+
+                    // Gamma slider
+                    ui.add(egui::Slider::new(
+                        &mut self.image_modifiers.gamma,
+                        0.1..=5.0,
+                    ));
+                });
+
                 // ... other image processing tools
             });
 
