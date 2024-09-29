@@ -28,9 +28,14 @@ fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
+#[derive(Default)]
+struct ImageMap {
+    pub original_image: Option<TextureHandle>,
+    pub modified_image: Option<TextureHandle>,
+}
+
 struct MyApp {
     libcudaimg: Library,
-    image_loaded: AtomicBool,
     image_path: Option<String>,
     modified_image_path: Option<String>,
     image: Option<DynamicImage>,
@@ -42,7 +47,6 @@ impl MyApp {
     fn new(libcudaimg: Library) -> Self {
         Self {
             libcudaimg,
-            image_loaded: AtomicBool::new(false),
             image_path: None,
             modified_image_path: None,
             image: None,
@@ -50,12 +54,6 @@ impl MyApp {
             image_map: ImageMap::default(),
         }
     }
-}
-
-#[derive(Default)]
-struct ImageMap {
-    pub original_image: Option<TextureHandle>,
-    pub modified_image: Option<TextureHandle>,
 }
 
 impl eframe::App for MyApp {
@@ -71,12 +69,17 @@ impl eframe::App for MyApp {
                         .pick_file()
                     {
                         self.image_path = Some(path.display().to_string());
+                        self.image = None;
+                        self.modified_image = None;
+                        self.image_map = ImageMap::default();
                     }
 
-                    if let Some(image_path) = &self.image_path {
-                        let image = image::open(image_path).expect("Failed to open image");
-                        self.image = Some(image);
-                        ctx.request_repaint();
+                    if self.image.is_none() {
+                        if let Some(image_path) = &self.image_path {
+                            let image = image::open(image_path).expect("Failed to open image");
+                            self.image = Some(image);
+                            ctx.request_repaint();
+                        }
                     }
                 }
 
@@ -93,11 +96,13 @@ impl eframe::App for MyApp {
             // Image processing tools
             ui.horizontal(|ui| {
                 if ui.button("Invert image").clicked() {
-                    if let Some(image) = &self.image {
-                        let modified_image = cudaimg::invert_image(&self.libcudaimg, image)
-                            .expect("Failed to invert image");
-                        self.modified_image = Some(modified_image);
-                        ctx.request_repaint();
+                    if self.modified_image.is_none() {
+                        if let Some(image) = &self.image {
+                            let modified_image = cudaimg::invert_image(&self.libcudaimg, image)
+                                .expect("Failed to invert image");
+                            self.modified_image = Some(modified_image);
+                            ctx.request_repaint();
+                        }
                     }
                 }
             });
