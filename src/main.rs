@@ -1,6 +1,6 @@
-use cuda_imgproc::{cudaimg, ShowResizedTexture, ToColorImage, ToImageSource};
 use egui::{Response, ScrollArea, TextureHandle, TextureOptions};
 use image::DynamicImage;
+use img_utils::{cudaimg, ShowResizedTexture, ToColorImage, ToImageSource};
 use libloading::Library;
 use log::{debug, info};
 use rfd::FileDialog;
@@ -98,8 +98,9 @@ impl eframe::App for MyApp {
                 // Invert image button
                 if ui.button("Invert image").clicked() && self.modified_image.is_none() {
                     if let Some(image) = &self.image {
-                        let modified_image = cudaimg::invert_image(&self.libcudaimg, image)
-                            .expect("Failed to invert image");
+                        let modified_image =
+                            img_utils::cudaimg::invert_image(&self.libcudaimg, image)
+                                .expect("Failed to invert image");
                         self.modified_image = Some(modified_image);
                     }
                 }

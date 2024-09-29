@@ -33,10 +33,6 @@ impl ToImageSource for DynamicImage {
             uri: Cow::Owned(String::from(image_id)),
             bytes: egui::load::Bytes::Shared(image_buffer),
         }
-
-        // let modified_image = self(image);
-        // let color_image = modified_image.to_color_image();
-        // ImageSource::Bytes(color_image)
     }
 }
 

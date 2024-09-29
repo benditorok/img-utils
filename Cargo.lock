@@ -1091,23 +1091,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "cuda-imgproc"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "eframe",
- "egui 0.28.1",
- "egui_extras",
- "env_logger",
- "fs_extra",
- "image",
- "instant",
- "libloading 0.8.5",
- "log",
- "rfd",
-]
-
-[[package]]
 name = "cursor-icon"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2032,6 +2015,23 @@ name = "imagesize"
 version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "029d73f573d8e8d63e6d5020011d3255b28c3ba85d6cf870a07184ed23de9284"
+
+[[package]]
+name = "img-utils"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "eframe",
+ "egui 0.28.1",
+ "egui_extras",
+ "env_logger",
+ "fs_extra",
+ "image",
+ "instant",
+ "libloading 0.8.5",
+ "log",
+ "rfd",
+]
 
 [[package]]
 name = "imgref"
