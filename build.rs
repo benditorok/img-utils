@@ -23,7 +23,7 @@ fn main() -> anyhow::Result<()> {
     // Copy the items to the directory where the executable will be placed
     copy_items(&paths_to_copy, &target_dir, &copy_options)?;
 
-    println!("cargo:rerun-if-changed=data/*"); // Ensure the build script runs if data changes
+    // println!("cargo:rerun-if-changed=data/*"); // Ensure the build script runs if data changes
 
     Ok(())
 }

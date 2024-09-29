@@ -1,37 +1,66 @@
+use egui::{ColorImage, ImageSource, ScrollArea, TextureHandle, TextureOptions};
 use image::DynamicImage;
 use libloading::{Library, Symbol};
+use std::{borrow::Cow, sync::Arc};
 
-pub fn invert_image(libcudaimg: &Library, image: &DynamicImage) -> anyhow::Result<DynamicImage> {
-    // Define the signature for the processImage function
-    type InvertImageFn =
-        unsafe extern "C" fn(image: *mut u8, image_len: u32, width: u32, height: u32);
-    // Get the invertImage function from the library
-    let process_image: Symbol<InvertImageFn> = unsafe { libcudaimg.get(b"invertImage\0")? };
+pub mod cudaimg;
 
-    // Load the image using the image crate
-    let img_rgb8 = image.to_rgb8();
-    let mut img_asbytes = img_rgb8.as_raw().to_owned();
-    let width: u32 = img_rgb8.width();
-    let height: u32 = img_rgb8.height();
+pub trait ToColorImage {
+    fn to_color_image(&self) -> ColorImage;
+}
 
-    println!("Image width: {}, height: {}", width, height);
-
-    // Call the processImage function (invert the image)
-    unsafe {
-        // Note: the width * 3 is used because the image is in RGB format, which means that each pixel has 3 bytes (R, G, B)
-        process_image(
-            img_asbytes.as_mut_ptr(),
-            img_asbytes.len() as u32,
-            width * 3,
-            height,
-        );
+impl ToColorImage for DynamicImage {
+    fn to_color_image(&self) -> ColorImage {
+        let rgba_image = self.to_rgba8();
+        let size = [self.width() as usize, self.height() as usize];
+        let pixels: Vec<_> = rgba_image
+            .pixels()
+            .map(|p| egui::Color32::from_rgba_unmultiplied(p[0], p[1], p[2], p[3]))
+            .collect();
+        ColorImage { size, pixels }
     }
+}
 
-    // Create a new image from the modified bytes
-    let inverted_image = image::DynamicImage::ImageRgb8(
-        image::RgbImage::from_raw(width, height, img_asbytes)
-            .expect("Failed to create the modified image from bytes"),
-    );
+pub trait ToImageSource {
+    fn to_image_source(&self, image_id: &str) -> egui::ImageSource;
+}
 
-    Ok(inverted_image)
+impl ToImageSource for DynamicImage {
+    fn to_image_source(&self, image_id: &str) -> egui::ImageSource {
+        let image_buffer: Arc<[u8]> = Arc::from(self.to_rgba8().into_raw().into_boxed_slice());
+
+        ImageSource::Bytes {
+            uri: Cow::Owned(String::from(image_id)),
+            bytes: egui::load::Bytes::Shared(image_buffer),
+        }
+    }
+}
+
+pub trait ShowResizedTexture {
+    fn show_resized_texture(&mut self, texture: &TextureHandle, component_id: &str);
+}
+
+impl ShowResizedTexture for egui::Ui {
+    fn show_resized_texture(&mut self, texture: &TextureHandle, component_id: &str) {
+        let image_size = texture.size_vec2();
+        let available_size = self.available_size();
+        let aspect_ratio = image_size.x / image_size.y;
+        let scaled_width = available_size.x.min(image_size.x);
+        let scaled_height = (scaled_width / aspect_ratio).min(available_size.y);
+        let desired_size = egui::Vec2::new(scaled_width, scaled_height);
+        let desired_rect = egui::Rect::from_min_size(self.min_rect().min, desired_size);
+
+        // Paint the image
+        self.painter().image(
+            texture.id(),
+            desired_rect,
+            egui::Rect::from_min_max(
+                egui::Pos2::new(0.0, 0.0),
+                egui::Pos2::new(1.0, 1.0), // Use normalized texture coordinates
+            ),
+            egui::Color32::WHITE,
+        );
+
+        self.allocate_space(desired_size);
+    }
 }

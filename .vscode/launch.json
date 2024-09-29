@@ -7,16 +7,16 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests in library 'callcuda_rs'",
+            "name": "Debug unit tests in library 'cuda_imgproc'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
                     "--lib",
-                    "--package=callcuda-rs"
+                    "--package=cuda-imgproc"
                 ],
                 "filter": {
-                    "name": "callcuda_rs",
+                    "name": "cuda_imgproc",
                     "kind": "lib"
                 }
             },
@@ -26,15 +26,15 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug executable 'callcuda-rs'",
+            "name": "Debug executable 'cuda-imgproc'",
             "cargo": {
                 "args": [
                     "build",
-                    "--bin=callcuda-rs",
-                    "--package=callcuda-rs"
+                    "--bin=cuda-imgproc",
+                    "--package=cuda-imgproc"
                 ],
                 "filter": {
-                    "name": "callcuda-rs",
+                    "name": "cuda-imgproc",
                     "kind": "bin"
                 }
             },
@@ -44,16 +44,16 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests in executable 'callcuda-rs'",
+            "name": "Debug unit tests in executable 'cuda-imgproc'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
-                    "--bin=callcuda-rs",
-                    "--package=callcuda-rs"
+                    "--bin=cuda-imgproc",
+                    "--package=cuda-imgproc"
                 ],
                 "filter": {
-                    "name": "callcuda-rs",
+                    "name": "cuda-imgproc",
                     "kind": "bin"
                 }
             },
