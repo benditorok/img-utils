@@ -1,10 +1,12 @@
-use cuda_imgproc::cudaimg;
-use egui::{TextureHandle, TextureOptions};
+use cuda_imgproc::{cudaimg, ToColorImage, ToImageSource};
+use egui::{Response, TextureHandle, TextureOptions};
 use image::DynamicImage;
 use libloading::Library;
+use log::{debug, info};
 use rfd::FileDialog;
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::AtomicBool;
 
 fn main() -> anyhow::Result<()> {
     env_logger::init();
@@ -15,7 +17,7 @@ fn main() -> anyhow::Result<()> {
 
     let options = eframe::NativeOptions::default();
     let _ = eframe::run_native(
-        "License Plate Extractor",
+        "Photoshop",
         options,
         Box::new(|_cc| {
             //egui_extras::install_image_loaders(&cc.egui_ctx);
@@ -24,59 +26,45 @@ fn main() -> anyhow::Result<()> {
     );
 
     Ok(())
-
-    // // Get the image path from the user
-    // let image_path = get_image_path()?;
-
-    // // Split the image path into name and extension
-    // let (image_name, image_ext) = split_image_path(&image_path)?;
-
-    // // Load the image from the 'data' directory
-    // let in_image_path = base_path.join(format!("data/{}.{}", &image_name, &image_ext));
-    // let out_image_path = base_path.join(format!("data/{}_inverted.{}", &image_name, &image_ext));
-
-    // // Load the image using the image crate
-    // let image = image::open(&in_image_path)?;
-
-    // // Invert the image using the CUDA library
-    // let inverted_image = cudaimg::invert_image(&libcudaimg, &image)?;
-
-    // // Save the modified image
-    // inverted_image
-    //     .save(&out_image_path)
-    //     .expect("Failed to save the modified image");
-    // println!("Image inverted and saved to {:?}", &out_image_path);
-
-    // The Library will be automatically unloaded when it goes out of scope
 }
 
 struct MyApp {
     libcudaimg: Library,
+    image_loaded: AtomicBool,
     image_path: Option<String>,
     modified_image_path: Option<String>,
     image: Option<DynamicImage>,
     modified_image: Option<DynamicImage>,
+    image_map: ImageMap,
 }
 
 impl MyApp {
     fn new(libcudaimg: Library) -> Self {
         Self {
             libcudaimg,
+            image_loaded: AtomicBool::new(false),
             image_path: None,
             modified_image_path: None,
             image: None,
             modified_image: None,
+            image_map: ImageMap::default(),
         }
     }
+}
+
+#[derive(Default)]
+struct ImageMap {
+    pub original_image: Option<TextureHandle>,
+    pub modified_image: Option<TextureHandle>,
 }
 
 impl eframe::App for MyApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
-            ui.label("Photoshop");
-
+            // Image selection and other information
             ui.horizontal(|ui| {
                 // Select image button
+
                 if ui.button("Select Image").clicked() {
                     if let Some(path) = FileDialog::new()
                         .add_filter("Image Files", &["jpg", "jpeg", "png"])
@@ -111,6 +99,7 @@ impl eframe::App for MyApp {
                 }
             }
 
+            // Display the images side by side
             ui.horizontal(|ui| {
                 // Get the available width of the panel
                 let available_width = ui.available_width();
@@ -120,7 +109,17 @@ impl eframe::App for MyApp {
                     ui.set_width(half_width);
 
                     if let Some(image) = &self.image {
-                        cuda_imgproc::display_image_in_ui(ui, image, 1);
+                        let texture: &egui::TextureHandle =
+                            self.image_map.original_image.get_or_insert_with(|| {
+                                // Load the texture only once.
+                                ui.ctx().load_texture(
+                                    "original",
+                                    image.to_color_image(),
+                                    Default::default(),
+                                )
+                            });
+
+                        ui.image(texture);
                     }
                 });
 
@@ -128,38 +127,20 @@ impl eframe::App for MyApp {
                     ui.set_width(half_width);
 
                     if let Some(modified_image) = &self.modified_image {
-                        cuda_imgproc::display_image_in_ui(ui, modified_image, 2);
+                        let texture: &egui::TextureHandle =
+                            self.image_map.modified_image.get_or_insert_with(|| {
+                                // Load the texture only once.
+                                ui.ctx().load_texture(
+                                    "modified",
+                                    modified_image.to_color_image(),
+                                    Default::default(),
+                                )
+                            });
+
+                        ui.image(texture);
                     }
                 });
             });
         });
     }
-}
-
-fn get_image_path() -> anyhow::Result<PathBuf> {
-    print!("Image to modify(./data/{{img_name.ext}}): ");
-
-    // Read the image name from the user
-    let mut image_name = String::new();
-    io::stdout().flush()?;
-    io::stdin().read_line(&mut image_name)?;
-
-    Ok(Path::new(image_name.trim()).to_path_buf())
-}
-
-fn split_image_path(image_path: &Path) -> anyhow::Result<(String, String)> {
-    let image_name = image_path
-        .file_stem()
-        .expect("Invalid image name")
-        .to_str()
-        .expect("Invalid image name")
-        .to_owned();
-    let image_ext = image_path
-        .extension()
-        .expect("Invalid image extension")
-        .to_str()
-        .expect("Invalid image extension")
-        .to_owned();
-
-    Ok((image_name, image_ext))
 }
