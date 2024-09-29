@@ -90,18 +90,20 @@ impl eframe::App for MyApp {
                 }
             });
 
-            if ui.button("Invert image").clicked() {
-                if let Some(image) = &self.image {
-                    let modified_image = cudaimg::invert_image(&self.libcudaimg, image)
-                        .expect("Failed to invert image");
-                    self.modified_image = Some(modified_image);
-                    ctx.request_repaint();
+            // Image processing tools
+            ui.horizontal(|ui| {
+                if ui.button("Invert image").clicked() {
+                    if let Some(image) = &self.image {
+                        let modified_image = cudaimg::invert_image(&self.libcudaimg, image)
+                            .expect("Failed to invert image");
+                        self.modified_image = Some(modified_image);
+                        ctx.request_repaint();
+                    }
                 }
-            }
-
-            let available_height = ui.available_height();
+            });
 
             // Display the images side by side
+            let available_height = ui.available_height();
             ui.horizontal(|ui| {
                 ui.set_height(available_height);
 
@@ -110,7 +112,7 @@ impl eframe::App for MyApp {
                 let half_width = available_width / 2.0;
 
                 ui.vertical(|ui| {
-                    ui.set_width(half_width);
+                    ui.set_width(half_width - ui.spacing().window_margin.left);
 
                     if let Some(image) = &self.image {
                         let texture: &egui::TextureHandle =
@@ -133,8 +135,10 @@ impl eframe::App for MyApp {
                     }
                 });
 
+                ui.add_space(ui.spacing().window_margin.right);
+
                 ui.vertical(|ui| {
-                    ui.set_width(half_width);
+                    ui.set_width(half_width - ui.spacing().window_margin.right);
 
                     if let Some(modified_image) = &self.modified_image {
                         let texture: &egui::TextureHandle =
