@@ -12,3 +12,6 @@ Image processing in Rust using [libcudaimg](https://github.com/benditorok/libcud
 ## Current features
 
 - Invert images
+- Gamma transformation
+- Logarithmic transformation
+- Grayscale conversion

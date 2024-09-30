@@ -1,6 +1,5 @@
-use egui::{ColorImage, ImageSource, ScrollArea, TextureHandle, TextureOptions};
+use egui::{ColorImage, ImageSource, TextureHandle};
 use image::DynamicImage;
-use libloading::{Library, Symbol};
 use std::{borrow::Cow, sync::Arc};
 
 pub mod cudaimg;

@@ -1,12 +1,10 @@
-use egui::{Response, ScrollArea, TextureHandle, TextureOptions};
+use egui::TextureHandle;
 use image::DynamicImage;
-use img_utils::{cudaimg, ShowResizedTexture, ToColorImage, ToImageSource};
+use img_utils::{ShowResizedTexture, ToColorImage};
 use libloading::Library;
-use log::{debug, info};
+use log::info;
 use rfd::FileDialog;
-use std::io::{self, Write};
-use std::path::{Path, PathBuf};
-use std::sync::atomic::AtomicBool;
+use std::path::Path;
 
 fn main() -> anyhow::Result<()> {
     env_logger::init();
@@ -29,9 +27,23 @@ fn main() -> anyhow::Result<()> {
 }
 
 #[derive(Default)]
-struct ImageMap {
+struct TextureMap {
     pub original_image: Option<TextureHandle>,
     pub modified_image: Option<TextureHandle>,
+}
+
+struct ImageModifiers {
+    pub gamma: f32,
+    pub log_base: f32,
+}
+
+impl Default for ImageModifiers {
+    fn default() -> Self {
+        Self {
+            gamma: 2.2,
+            log_base: 10.0,
+        }
+    }
 }
 
 #[allow(unused)]
@@ -41,7 +53,8 @@ struct MyApp {
     modified_image_path: Option<String>,
     image: Option<DynamicImage>,
     modified_image: Option<DynamicImage>,
-    image_map: ImageMap,
+    texture_map: TextureMap,
+    image_modifiers: ImageModifiers,
 }
 
 impl MyApp {
@@ -52,7 +65,8 @@ impl MyApp {
             modified_image_path: None,
             image: None,
             modified_image: None,
-            image_map: ImageMap::default(),
+            texture_map: TextureMap::default(),
+            image_modifiers: ImageModifiers::default(),
         }
     }
 }
@@ -72,7 +86,7 @@ impl eframe::App for MyApp {
                         self.image_path = Some(path.display().to_string());
                         self.image = None;
                         self.modified_image = None;
-                        self.image_map = ImageMap::default();
+                        self.texture_map = TextureMap::default();
                     }
 
                     if self.image.is_none() {
@@ -96,14 +110,92 @@ impl eframe::App for MyApp {
             // Image processing tools
             ui.horizontal(|ui| {
                 // Invert image button
-                if ui.button("Invert image").clicked() && self.modified_image.is_none() {
+                if ui.button("Invert image").clicked() {
+                    self.texture_map.modified_image = None;
+
                     if let Some(image) = &self.image {
+                        let start = std::time::Instant::now();
                         let modified_image =
                             img_utils::cudaimg::invert_image(&self.libcudaimg, image)
                                 .expect("Failed to invert image");
+                        let duration = start.elapsed();
+                        info!("Invert image duration: {:?}", duration);
+
                         self.modified_image = Some(modified_image);
                     }
                 }
+
+                // Gamma transformation
+                ui.vertical(|ui| {
+                    if ui.button("Gamma transformation").clicked() {
+                        self.texture_map.modified_image = None;
+
+                        if let Some(image) = &self.image {
+                            let start = std::time::Instant::now();
+                            let modified_image = img_utils::cudaimg::gamma_transform_image(
+                                &self.libcudaimg,
+                                image,
+                                self.image_modifiers.gamma,
+                            )
+                            .expect("Failed to use gamma transformation on image");
+                            let duration = start.elapsed();
+                            info!("Gamma transformation duration: {:?}", duration);
+
+                            self.modified_image = Some(modified_image);
+                        }
+                    }
+
+                    // Gamma slider
+                    ui.add(egui::Slider::new(
+                        &mut self.image_modifiers.gamma,
+                        0.1..=5.0,
+                    ));
+                });
+
+                // Logarithmic transformation
+                ui.vertical(|ui| {
+                    if ui.button("Logarithmic transformation").clicked() {
+                        self.texture_map.modified_image = None;
+
+                        if let Some(image) = &self.image {
+                            let start = std::time::Instant::now();
+                            let modified_image = img_utils::cudaimg::logarithmic_transform_image(
+                                &self.libcudaimg,
+                                image,
+                                self.image_modifiers.log_base,
+                            )
+                            .expect("Failed to use logarithmic transformation on image");
+                            let duration = start.elapsed();
+                            info!("Logarithmic transformation duration: {:?}", duration);
+
+                            self.modified_image = Some(modified_image);
+                        }
+                    }
+
+                    // Gamma slider
+                    ui.add(egui::Slider::new(
+                        &mut self.image_modifiers.log_base,
+                        0.1..=100f32,
+                    ));
+                });
+
+                // Convert to grayscale
+                ui.vertical(|ui| {
+                    if ui.button("Convert to grayscale").clicked() {
+                        self.texture_map.modified_image = None;
+
+                        if let Some(image) = &self.image {
+                            let start = std::time::Instant::now();
+                            let modified_image =
+                                img_utils::cudaimg::grayscale_image(&self.libcudaimg, image)
+                                    .expect("Failed to convert to grayscale");
+                            let duration = start.elapsed();
+                            info!("Grayscale image duration: {:?}", duration);
+
+                            self.modified_image = Some(modified_image);
+                        }
+                    }
+                });
 
                 // ... other image processing tools
             });
@@ -122,7 +214,7 @@ impl eframe::App for MyApp {
 
                     if let Some(image) = &self.image {
                         let texture: &egui::TextureHandle =
-                            self.image_map.original_image.get_or_insert_with(|| {
+                            self.texture_map.original_image.get_or_insert_with(|| {
                                 // Load the texture only once.
                                 ui.ctx().load_texture(
                                     "image_original",
@@ -148,7 +240,7 @@ impl eframe::App for MyApp {
 
                     if let Some(modified_image) = &self.modified_image {
                         let texture: &egui::TextureHandle =
-                            self.image_map.modified_image.get_or_insert_with(|| {
+                            self.texture_map.modified_image.get_or_insert_with(|| {
                                 // Load the texture only once.
                                 ui.ctx().load_texture(
                                     "image_modified",
