@@ -175,7 +175,7 @@ impl eframe::App for MyApp {
                     // Gamma slider
                     ui.add(egui::Slider::new(
                         &mut self.image_modifiers.log_base,
-                        2.0..=20.0,
+                        0.1..=100f32,
                     ));
                 });
 
