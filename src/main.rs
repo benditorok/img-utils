@@ -34,11 +34,15 @@ struct TextureMap {
 
 struct ImageModifiers {
     pub gamma: f32,
+    pub log_base: f32,
 }
 
 impl Default for ImageModifiers {
     fn default() -> Self {
-        Self { gamma: 2.2 }
+        Self {
+            gamma: 2.2,
+            log_base: 10.0,
+        }
     }
 }
 
@@ -121,8 +125,8 @@ impl eframe::App for MyApp {
                     }
                 }
 
+                // Gamma transformation
                 ui.vertical(|ui| {
-                    // Gamma transform image button
                     if ui.button("Gamma transformation").clicked() {
                         self.texture_map.modified_image = None;
 
@@ -145,6 +149,33 @@ impl eframe::App for MyApp {
                     ui.add(egui::Slider::new(
                         &mut self.image_modifiers.gamma,
                         0.1..=5.0,
+                    ));
+                });
+
+                // Logarithmic transformation
+                ui.vertical(|ui| {
+                    if ui.button("Logarithmic transformation").clicked() {
+                        self.texture_map.modified_image = None;
+
+                        if let Some(image) = &self.image {
+                            let start = std::time::Instant::now();
+                            let modified_image = img_utils::cudaimg::logarithmic_transform_image(
+                                &self.libcudaimg,
+                                image,
+                                self.image_modifiers.log_base,
+                            )
+                            .expect("Failed to use Gamma transformation on image");
+                            let duration = start.elapsed();
+                            info!("Gamma transformation duration: {:?}", duration);
+
+                            self.modified_image = Some(modified_image);
+                        }
+                    }
+
+                    // Gamma slider
+                    ui.add(egui::Slider::new(
+                        &mut self.image_modifiers.log_base,
+                        2.0..=20.0,
                     ));
                 });
 
