@@ -179,21 +179,23 @@ impl eframe::App for MyApp {
                     ));
                 });
 
-                // Invert image button
-                if ui.button("Convert to grayscale").clicked() {
-                    self.texture_map.modified_image = None;
+                // Convert to grayscale
+                ui.vertical(|ui| {
+                    if ui.button("Convert to grayscale").clicked() {
+                        self.texture_map.modified_image = None;
 
-                    if let Some(image) = &self.image {
-                        let start = std::time::Instant::now();
-                        let modified_image =
-                            img_utils::cudaimg::grayscale_image(&self.libcudaimg, image)
-                                .expect("Failed to convert to grayscale");
-                        let duration = start.elapsed();
-                        info!("Grayscale image duration: {:?}", duration);
+                        if let Some(image) = &self.image {
+                            let start = std::time::Instant::now();
+                            let modified_image =
+                                img_utils::cudaimg::grayscale_image(&self.libcudaimg, image)
+                                    .expect("Failed to convert to grayscale");
+                            let duration = start.elapsed();
+                            info!("Grayscale image duration: {:?}", duration);
 
-                        self.modified_image = Some(modified_image);
+                            self.modified_image = Some(modified_image);
+                        }
                     }
-                }
+                });
 
                 // ... other image processing tools
             });
