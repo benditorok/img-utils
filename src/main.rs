@@ -137,7 +137,7 @@ impl eframe::App for MyApp {
                                 image,
                                 self.image_modifiers.gamma,
                             )
-                            .expect("Failed to use Gamma transformation on image");
+                            .expect("Failed to use gamma transformation on image");
                             let duration = start.elapsed();
                             info!("Gamma transformation duration: {:?}", duration);
 
@@ -164,9 +164,9 @@ impl eframe::App for MyApp {
                                 image,
                                 self.image_modifiers.log_base,
                             )
-                            .expect("Failed to use Gamma transformation on image");
+                            .expect("Failed to use logarithmic transformation on image");
                             let duration = start.elapsed();
-                            info!("Gamma transformation duration: {:?}", duration);
+                            info!("Logarithmic transformation duration: {:?}", duration);
 
                             self.modified_image = Some(modified_image);
                         }
@@ -178,6 +178,22 @@ impl eframe::App for MyApp {
                         0.1..=100f32,
                     ));
                 });
+
+                // Invert image button
+                if ui.button("Convert to grayscale").clicked() {
+                    self.texture_map.modified_image = None;
+
+                    if let Some(image) = &self.image {
+                        let start = std::time::Instant::now();
+                        let modified_image =
+                            img_utils::cudaimg::grayscale_image(&self.libcudaimg, image)
+                                .expect("Failed to convert to grayscale");
+                        let duration = start.elapsed();
+                        info!("Grayscale image duration: {:?}", duration);
+
+                        self.modified_image = Some(modified_image);
+                    }
+                }
 
                 // ... other image processing tools
             });
