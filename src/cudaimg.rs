@@ -117,3 +117,41 @@ pub fn gamma_transform_image(
 
     Ok(modified_image)
 }
+
+/// Definition of the logarithmicTransformImage function from libcudaimg
+type LogarithmicTransformImage =
+    unsafe extern "C" fn(image: *mut u8, image_len: u32, width: u32, height: u32, base: f32);
+
+pub fn logarithmic_transform_image(
+    libcudaimg: &Library,
+    image: &DynamicImage,
+    base: f32,
+) -> anyhow::Result<DynamicImage> {
+    // Get the invertImage function from the library
+    let process_image: Symbol<LogarithmicTransformImage> =
+        unsafe { libcudaimg.get(b"logarithmicTransformImage\0")? };
+
+    // Get the image data
+    let mut img = image.to_cuda_image_data();
+
+    info!("Image width: {}, height: {}", img.width, img.height);
+
+    // Call the processImage function (invert the image)
+    unsafe {
+        process_image(
+            img.bytes.as_mut_ptr(),
+            img.raw_len,
+            img.width * img.pixel_size,
+            img.height,
+            base,
+        );
+    }
+
+    // Create a new image from the modified bytes
+    let modified_image = image::DynamicImage::ImageRgb8(
+        image::RgbImage::from_raw(img.width, img.height, img.bytes)
+            .expect("Failed to create the modified image from bytes"),
+    );
+
+    Ok(modified_image)
+}
