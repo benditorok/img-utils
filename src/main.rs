@@ -13,7 +13,11 @@ fn main() -> anyhow::Result<()> {
     let lib_path = Path::new("data/libcudaimg.dll");
     let libcudaimg = unsafe { Library::new(lib_path)? };
 
-    let options = eframe::NativeOptions::default();
+    let options = eframe::NativeOptions {
+        vsync: true,
+        ..Default::default()
+    };
+
     let _ = eframe::run_native(
         "Image Processing Utility",
         options,
