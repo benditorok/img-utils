@@ -2,6 +2,7 @@ use egui::{ColorImage, ImageSource, TextureHandle};
 use image::DynamicImage;
 use std::{borrow::Cow, sync::Arc};
 
+pub mod app;
 pub mod cudaimg;
 
 pub trait ToColorImage {
