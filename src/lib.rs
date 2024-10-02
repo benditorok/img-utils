@@ -48,7 +48,14 @@ impl ShowResizedTexture for egui::Ui {
         let scaled_width = available_size.x.min(image_size.x);
         let scaled_height = (scaled_width / aspect_ratio).min(available_size.y);
         let desired_size = egui::Vec2::new(scaled_width, scaled_height);
-        let desired_rect = egui::Rect::from_min_size(self.min_rect().min, desired_size);
+
+        // Calculate the offset to center the image
+        let offset_x = (available_size.x - desired_size.x) / 2.0;
+        let offset_y = (available_size.y - desired_size.y) / 2.0;
+        let desired_rect = egui::Rect::from_min_size(
+            self.min_rect().min + egui::Vec2::new(offset_x, offset_y),
+            desired_size,
+        );
 
         // Paint the image
         self.painter().image(

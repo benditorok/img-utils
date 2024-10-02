@@ -236,7 +236,7 @@ pub fn compute_histogram(
 }
 
 pub fn plot_histogram(histogram: &CudaHistogramData) -> anyhow::Result<DynamicImage> {
-    let root = BitMapBackend::new("histogram.png", (800, 600)).into_drawing_area();
+    let root = BitMapBackend::new("histogram.png", (600, 400)).into_drawing_area();
     root.fill(&WHITE)?;
 
     let mut chart = ChartBuilder::on(&root)
