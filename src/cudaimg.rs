@@ -49,6 +49,10 @@ impl ToCudaImageData for DynamicImage {
     }
 }
 
+pub struct Histogram {
+    pub data: Vec<u32>,
+}
+
 /// Definition of the processImage function from libcudaimg
 type InvertImageFn = unsafe extern "C" fn(image: *mut u8, image_len: u32, width: u32, height: u32);
 
@@ -186,4 +190,41 @@ pub fn grayscale_image(libcudaimg: &Library, image: &DynamicImage) -> anyhow::Re
     );
 
     Ok(inverted_image)
+}
+
+/// Definition of the processImage function from libcudaimg
+type ComputeHistogramFn = unsafe extern "C" fn(
+    image: *mut u8,
+    image_len: u32,
+    histogram: *mut u32,
+    width: u32,
+    height: u32,
+);
+
+pub fn compute_histogram(libcudaimg: &Library, image: &DynamicImage) -> anyhow::Result<Histogram> {
+    // Get the invertImage function from the library
+    let process_image: Symbol<ComputeHistogramFn> =
+        unsafe { libcudaimg.get(b"computeHistogram\0")? };
+
+    let mut histogram = Histogram {
+        data: vec![0u32; 256],
+    };
+
+    // Get the image data
+    let mut img = image.to_cuda_image_data();
+
+    info!("Image width: {}, height: {}", img.width, img.height);
+
+    // Call the processImage function (invert the image)
+    unsafe {
+        process_image(
+            img.bytes.as_mut_ptr(),
+            img.raw_len,
+            histogram.data.as_mut_ptr(),
+            img.width * img.pixel_size,
+            img.height,
+        );
+    }
+
+    Ok(histogram)
 }

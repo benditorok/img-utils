@@ -176,6 +176,22 @@ impl eframe::App for MyApp {
                     }
                 });
 
+                // Generate histogram
+                ui.vertical(|ui| {
+                    if ui.button("Generate histogram").clicked() {
+                        self.texture_map.modified_image = None;
+
+                        if let Some(image) = &self.image {
+                            let start = std::time::Instant::now();
+                            let histogram =
+                                crate::cudaimg::compute_histogram(&self.libcudaimg, image)
+                                    .expect("Failed to generate histogram");
+                            let duration = start.elapsed();
+                            info!("Histogram generation duration: {:?}", duration);
+                        }
+                    }
+                });
+
                 // ... other image processing tools
             });
 
