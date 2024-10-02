@@ -188,6 +188,11 @@ impl eframe::App for MyApp {
                                     .expect("Failed to generate histogram");
                             let duration = start.elapsed();
                             info!("Histogram generation duration: {:?}", duration);
+
+                            let histogram = crate::cudaimg::plot_histogram(&histogram)
+                                .expect("Failed to plot histogram");
+
+                            self.modified_image = Some(histogram);
                         }
                     }
                 });

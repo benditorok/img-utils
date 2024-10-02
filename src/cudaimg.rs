@@ -1,6 +1,9 @@
+use std::any;
+
 use image::DynamicImage;
 use libloading::{Library, Symbol};
 use log::info;
+use plotters::prelude::*;
 
 /// Trait to convert an image to CudaImageData
 pub trait ToCudaImageData {
@@ -49,7 +52,7 @@ impl ToCudaImageData for DynamicImage {
     }
 }
 
-pub struct Histogram {
+pub struct CudaHistogramData {
     pub data: Vec<u32>,
 }
 
@@ -201,12 +204,15 @@ type ComputeHistogramFn = unsafe extern "C" fn(
     height: u32,
 );
 
-pub fn compute_histogram(libcudaimg: &Library, image: &DynamicImage) -> anyhow::Result<Histogram> {
+pub fn compute_histogram(
+    libcudaimg: &Library,
+    image: &DynamicImage,
+) -> anyhow::Result<CudaHistogramData> {
     // Get the invertImage function from the library
     let process_image: Symbol<ComputeHistogramFn> =
         unsafe { libcudaimg.get(b"computeHistogram\0")? };
 
-    let mut histogram = Histogram {
+    let mut histogram = CudaHistogramData {
         data: vec![0u32; 256],
     };
 
@@ -227,4 +233,44 @@ pub fn compute_histogram(libcudaimg: &Library, image: &DynamicImage) -> anyhow::
     }
 
     Ok(histogram)
+}
+
+pub fn plot_histogram(histogram: &CudaHistogramData) -> anyhow::Result<DynamicImage> {
+    let root = BitMapBackend::new("histogram.png", (800, 600)).into_drawing_area();
+    root.fill(&WHITE)?;
+
+    let mut chart = ChartBuilder::on(&root)
+        .caption("Histogram", ("sans-serif", 30).into_font())
+        .margin(5)
+        .x_label_area_size(30)
+        .y_label_area_size(30)
+        .build_cartesian_2d(
+            (0u32..256u32).into_segmented(),
+            0u32..*histogram.data.iter().max().unwrap_or(&0),
+        )?;
+
+    chart
+        .configure_mesh()
+        .disable_x_mesh()
+        .bold_line_style(WHITE.mix(0.3))
+        .y_desc("Count")
+        .x_desc("Pixel value")
+        .axis_desc_style(("sans-serif", 15))
+        .draw()?;
+
+    chart.draw_series(
+        Histogram::vertical(&chart)
+            .style(GREEN.mix(0.5).filled())
+            .data(
+                histogram
+                    .data
+                    .iter()
+                    .enumerate()
+                    .map(|(i, &count)| (i as u32, count)),
+            ),
+    )?;
+
+    root.present()?;
+    let img = image::open("histogram.png")?;
+    Ok(img)
 }
