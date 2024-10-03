@@ -10,16 +10,14 @@ fn main() -> anyhow::Result<()> {
 
     let options = eframe::NativeOptions {
         vsync: true,
+        hardware_acceleration: eframe::HardwareAcceleration::Required,
         ..Default::default()
     };
 
     let _ = eframe::run_native(
         "Image Processing Utility",
         options,
-        Box::new(|_cc| {
-            //egui_extras::install_image_loaders(&cc.egui_ctx);
-            Ok(Box::new(img_utils::app::MyApp::new(libcudaimg)))
-        }),
+        Box::new(|_cc| Ok(Box::new(img_utils::app::MyApp::new(libcudaimg)))),
     );
 
     Ok(())
