@@ -50,13 +50,36 @@ impl ToCudaImageData for DynamicImage {
     }
 }
 
+/// Struct to hold the histogram data for communication with libcudaimg
+///
+/// # Fields
+///
+/// * `data` - The histogram data as a vector of u32 values
 pub struct CudaHistogramData {
     pub data: Vec<u32>,
+}
+
+impl Default for CudaHistogramData {
+    fn default() -> Self {
+        CudaHistogramData {
+            data: vec![0u32; 256],
+        }
+    }
 }
 
 /// Definition of the processImage function from libcudaimg
 type InvertImageFn = unsafe extern "C" fn(image: *mut u8, image_len: u32, width: u32, height: u32);
 
+/// Invert an image using libcudaimg
+///
+/// # Arguments
+///
+/// * `libcudaimg` - The libcudaimg library
+/// * `image` - The image to invert
+///
+/// # Returns
+///
+/// * The inverted image
 pub fn invert_image(libcudaimg: &Library, image: &DynamicImage) -> anyhow::Result<DynamicImage> {
     // Get the invertImage function from the library
     let process_image: Symbol<InvertImageFn> = unsafe { libcudaimg.get(b"invertImage\0")? };
@@ -89,6 +112,17 @@ pub fn invert_image(libcudaimg: &Library, image: &DynamicImage) -> anyhow::Resul
 type GammaTransformImage =
     unsafe extern "C" fn(image: *mut u8, image_len: u32, width: u32, height: u32, gamma: f32);
 
+/// Apply a gamma transformation to an image using libcudaimg
+///
+/// # Arguments
+///
+/// * `libcudaimg` - The libcudaimg library
+/// * `image` - The image to transform
+/// * `gamma` - The gamma value to use
+///
+/// # Returns
+///
+/// * The transformed image
 pub fn gamma_transform_image(
     libcudaimg: &Library,
     image: &DynamicImage,
@@ -127,6 +161,17 @@ pub fn gamma_transform_image(
 type LogarithmicTransformImage =
     unsafe extern "C" fn(image: *mut u8, image_len: u32, width: u32, height: u32, base: f32);
 
+/// Apply a logarithmic transformation to an image using libcudaimg
+///
+/// # Arguments
+///
+/// * `libcudaimg` - The libcudaimg library
+/// * `image` - The image to transform
+/// * `base` - The base value to use
+///
+/// # Returns
+///
+/// * The transformed image
 pub fn logarithmic_transform_image(
     libcudaimg: &Library,
     image: &DynamicImage,
@@ -165,6 +210,16 @@ pub fn logarithmic_transform_image(
 type GrayscaleImageFn =
     unsafe extern "C" fn(image: *mut u8, image_len: u32, width: u32, height: u32);
 
+/// Convert an image to grayscale using libcudaimg
+///     
+/// # Arguments
+///
+/// * `libcudaimg` - The libcudaimg library
+/// * `image` - The image to convert
+///
+/// # Returns
+///
+/// * The grayscale image
 pub fn grayscale_image(libcudaimg: &Library, image: &DynamicImage) -> anyhow::Result<DynamicImage> {
     // Get the invertImage function from the library
     let process_image: Symbol<GrayscaleImageFn> = unsafe { libcudaimg.get(b"grayscaleImage\0")? };
@@ -202,6 +257,16 @@ type ComputeHistogramFn = unsafe extern "C" fn(
     height: u32,
 );
 
+/// Compute the histogram of an image using libcudaimg
+///
+/// # Arguments
+///
+/// * `libcudaimg` - The libcudaimg library
+/// * `image` - The image to compute the histogram of
+///
+/// # Returns
+///
+/// * The histogram data
 pub fn compute_histogram(
     libcudaimg: &Library,
     image: &DynamicImage,
@@ -210,9 +275,7 @@ pub fn compute_histogram(
     let process_image: Symbol<ComputeHistogramFn> =
         unsafe { libcudaimg.get(b"computeHistogram\0")? };
 
-    let mut histogram = CudaHistogramData {
-        data: vec![0u32; 256],
-    };
+    let mut histogram = CudaHistogramData::default();
 
     // Get the image data
     let mut img = image.to_cuda_image_data();
@@ -233,6 +296,15 @@ pub fn compute_histogram(
     Ok(histogram)
 }
 
+/// Plot a histogram using plotters
+///
+/// # Arguments
+///
+/// * `histogram` - The histogram data to plot
+///
+/// # Returns
+///
+/// * The plotted histogram as a DynamicImage
 pub fn plot_histogram(histogram: &CudaHistogramData) -> anyhow::Result<DynamicImage> {
     let root = BitMapBackend::new("data/histogram.png", (600, 400)).into_drawing_area();
     root.fill(&WHITE)?;
