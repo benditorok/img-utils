@@ -35,6 +35,7 @@ pub struct MyApp {
     modified_image: Option<DynamicImage>,
     texture_map: TextureMap,
     image_modifiers: ImageModifiers,
+    last_operation_duration: Option<std::time::Duration>,
 }
 
 impl MyApp {
@@ -47,6 +48,7 @@ impl MyApp {
             modified_image: None,
             texture_map: TextureMap::default(),
             image_modifiers: ImageModifiers::default(),
+            last_operation_duration: None,
         }
     }
 }
@@ -57,7 +59,6 @@ impl eframe::App for MyApp {
             // Image selection and other information
             ui.horizontal(|ui| {
                 // Select image button
-
                 if ui.button("Select Image").clicked() {
                     if let Some(path) = FileDialog::new()
                         .add_filter("Image Files", &["jpg", "jpeg", "png"])
@@ -85,6 +86,15 @@ impl eframe::App for MyApp {
                 } else {
                     ui.label("No image selected");
                 }
+
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    // Display the last operation duration
+                    if let Some(duration) = self.last_operation_duration {
+                        ui.label(format!("Last operation duration: {:?}", duration));
+                    } else {
+                        ui.label("No operation performed yet");
+                    }
+                });
             });
 
             // Image processing tools
@@ -97,8 +107,7 @@ impl eframe::App for MyApp {
                         let start = std::time::Instant::now();
                         let modified_image = crate::cudaimg::invert_image(&self.libcudaimg, image)
                             .expect("Failed to invert image");
-                        let duration = start.elapsed();
-                        info!("Invert image duration: {:?}", duration);
+                        self.last_operation_duration = Some(start.elapsed());
 
                         self.modified_image = Some(modified_image);
                     }
@@ -117,8 +126,7 @@ impl eframe::App for MyApp {
                                 self.image_modifiers.gamma,
                             )
                             .expect("Failed to use gamma transformation on image");
-                            let duration = start.elapsed();
-                            info!("Gamma transformation duration: {:?}", duration);
+                            self.last_operation_duration = Some(start.elapsed());
 
                             self.modified_image = Some(modified_image);
                         }
@@ -144,8 +152,7 @@ impl eframe::App for MyApp {
                                 self.image_modifiers.log_base,
                             )
                             .expect("Failed to use logarithmic transformation on image");
-                            let duration = start.elapsed();
-                            info!("Logarithmic transformation duration: {:?}", duration);
+                            self.last_operation_duration = Some(start.elapsed());
 
                             self.modified_image = Some(modified_image);
                         }
@@ -168,8 +175,7 @@ impl eframe::App for MyApp {
                             let modified_image =
                                 crate::cudaimg::grayscale_image(&self.libcudaimg, image)
                                     .expect("Failed to convert to grayscale");
-                            let duration = start.elapsed();
-                            info!("Grayscale image duration: {:?}", duration);
+                            self.last_operation_duration = Some(start.elapsed());
 
                             self.modified_image = Some(modified_image);
                         }
@@ -186,8 +192,7 @@ impl eframe::App for MyApp {
                             let histogram =
                                 crate::cudaimg::compute_histogram(&self.libcudaimg, image)
                                     .expect("Failed to generate histogram");
-                            let duration = start.elapsed();
-                            info!("Histogram generation duration: {:?}", duration);
+                            self.last_operation_duration = Some(start.elapsed());
 
                             let histogram = crate::cudaimg::plot_histogram(&histogram)
                                 .expect("Failed to plot histogram");
