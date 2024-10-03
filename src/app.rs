@@ -1,41 +1,7 @@
-use crate::{ShowResizedTexture, ToColorImage};
-use egui::TextureHandle;
+use crate::{ImageModifiers, ShowResizedTexture, TextureMap, ToColorImage};
 use image::DynamicImage;
 use libloading::Library;
 use rfd::FileDialog;
-
-#[derive(Default)]
-/// A struct to hold the original and modified images as texture handles.
-/// This is useful to avoid loading the same image multiple times.
-///
-/// # Fields
-///
-/// * `original_image` - The original image as a texture handle.
-/// * `modified_image` - The modified image as a texture handle.
-struct TextureMap {
-    pub original_image: Option<TextureHandle>,
-    pub modified_image: Option<TextureHandle>,
-}
-
-/// A struct to hold the image modifiers.
-///
-/// # Fields
-///
-/// * `gamma` - The gamma value to use for gamma transformation.
-/// * `log_base` - The base value to use for logarithmic transformation.
-struct ImageModifiers {
-    pub gamma: f32,
-    pub log_base: f32,
-}
-
-impl Default for ImageModifiers {
-    fn default() -> Self {
-        Self {
-            gamma: 2.2,
-            log_base: 10.0,
-        }
-    }
-}
 
 #[allow(unused)]
 pub struct MyApp {
