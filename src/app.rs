@@ -4,7 +4,7 @@ use image::DynamicImage;
 use libloading::Library;
 use log::info;
 use rfd::FileDialog;
-use std::path::Path;
+use std::{fmt::format, path::Path};
 
 #[derive(Default)]
 struct TextureMap {
@@ -56,6 +56,8 @@ impl MyApp {
 impl eframe::App for MyApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
+            ui.separator();
+
             // Image selection and other information
             ui.horizontal(|ui| {
                 // Select image button
@@ -79,16 +81,14 @@ impl eframe::App for MyApp {
                 }
 
                 // Display the image path
-                ui.label("Image Path:");
-
                 if let Some(image_path) = &self.image_path {
-                    ui.label(image_path);
+                    ui.label(format!("Image Path: {}", image_path));
                 } else {
                     ui.label("No image selected");
                 }
 
+                // Display the last operation duration
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    // Display the last operation duration
                     if let Some(duration) = self.last_operation_duration {
                         ui.label(format!("Last operation duration: {:?}", duration));
                     } else {
@@ -96,6 +96,8 @@ impl eframe::App for MyApp {
                     }
                 });
             });
+
+            ui.separator();
 
             // Image processing tools
             ui.horizontal(|ui| {
