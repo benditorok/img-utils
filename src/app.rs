@@ -2,9 +2,7 @@ use crate::{ShowResizedTexture, ToColorImage};
 use egui::TextureHandle;
 use image::DynamicImage;
 use libloading::Library;
-use log::info;
 use rfd::FileDialog;
-use std::{fmt::format, path::Path};
 
 #[derive(Default)]
 struct TextureMap {
@@ -216,6 +214,7 @@ impl eframe::App for MyApp {
                 let available_width = ui.available_width();
                 let half_width = available_width / 2.0;
 
+                // Display the original image
                 ui.vertical(|ui| {
                     ui.set_width(half_width - ui.spacing().window_margin.left);
 
@@ -230,18 +229,13 @@ impl eframe::App for MyApp {
                                 )
                             });
 
-                        ui.show_resized_texture(texture, "original");
-
-                        // ScrollArea::both()
-                        //     .id_source("scroll_area_original")
-                        //     .show(ui, |ui| {
-                        //         ui.image(texture);
-                        //     });
+                        ui.show_resized_texture(texture);
                     }
                 });
 
                 ui.add_space(ui.spacing().window_margin.right);
 
+                // Display the modified image
                 ui.vertical(|ui| {
                     ui.set_width(half_width - ui.spacing().window_margin.right);
 
@@ -256,13 +250,7 @@ impl eframe::App for MyApp {
                                 )
                             });
 
-                        ui.show_resized_texture(texture, "modified");
-
-                        // ScrollArea::both()
-                        //     .id_source("scroll_area_modified")
-                        //     .show(ui, |ui| {
-                        //         ui.image(texture);
-                        //     });
+                        ui.show_resized_texture(texture);
                     }
                 });
             });

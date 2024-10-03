@@ -37,11 +37,11 @@ impl ToImageSource for DynamicImage {
 }
 
 pub trait ShowResizedTexture {
-    fn show_resized_texture(&mut self, texture: &TextureHandle, component_id: &str);
+    fn show_resized_texture(&mut self, texture: &TextureHandle);
 }
 
 impl ShowResizedTexture for egui::Ui {
-    fn show_resized_texture(&mut self, texture: &TextureHandle, component_id: &str) {
+    fn show_resized_texture(&mut self, texture: &TextureHandle) {
         let image_size = texture.size_vec2();
         let available_size = self.available_size();
         let aspect_ratio = image_size.x / image_size.y;
