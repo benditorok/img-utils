@@ -181,6 +181,23 @@ impl eframe::App for MyApp {
                     }
                 });
 
+                // Balance histogram
+                ui.vertical(|ui| {
+                    if ui.button("Balance histogram").clicked() {
+                        self.texture_map.modified_image = None;
+
+                        if let Some(image) = &self.image {
+                            let start = std::time::Instant::now();
+                            let balanced_image =
+                                crate::cudaimg::balance_histogram(&self.libcudaimg, image)
+                                    .expect("Failed to balance histogram");
+                            self.last_operation_duration = Some(start.elapsed());
+
+                            self.modified_image = Some(balanced_image);
+                        }
+                    }
+                });
+
                 // ... other image processing tools
             });
 

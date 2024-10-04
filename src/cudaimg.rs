@@ -27,6 +27,10 @@ type ComputeHistogramFn = unsafe extern "C" fn(
     height: u32,
 );
 
+/// Definition of the balanceHistogram function from libcudaimg.
+type BalanceHistogramFn =
+    unsafe extern "C" fn(image: *mut u8, image_len: u32, width: u32, height: u32);
+
 /// Trait to convert an image to CudaImageData.
 pub trait ToCudaImageData {
     fn to_cuda_image_data(&self) -> CudaImageData;
@@ -343,4 +347,36 @@ pub fn plot_histogram(histogram: &CudaHistogramData) -> anyhow::Result<DynamicIm
     root.present()?;
     let img = image::open("data/histogram.png")?;
     Ok(img)
+}
+
+pub fn balance_histogram(
+    libcudaimg: &Library,
+    image: &DynamicImage,
+) -> anyhow::Result<DynamicImage> {
+    // Get the invertImage function from the library
+    let process_image: Symbol<BalanceHistogramFn> =
+        unsafe { libcudaimg.get(b"balanceHistogram\0")? };
+
+    // Get the image data
+    let mut img = image.to_cuda_image_data();
+
+    info!("Image width: {}, height: {}", img.width, img.height);
+
+    // Call the processImage function (invert the image)
+    unsafe {
+        process_image(
+            img.bytes.as_mut_ptr(),
+            img.raw_len,
+            img.width * img.pixel_size,
+            img.height,
+        );
+    }
+
+    // Create a new image from the modified bytes
+    let modified_image = image::DynamicImage::ImageRgb8(
+        image::RgbImage::from_raw(img.width, img.height, img.bytes)
+            .expect("Failed to create the modified image from bytes"),
+    );
+
+    Ok(modified_image)
 }
