@@ -18,3 +18,4 @@ This project currently runs only on Windows. For the _libcudaimg_ library to bui
 - Logarithmic transformation
 - Grayscale conversion
 - Histogram plotting
+- Histogram balancing
