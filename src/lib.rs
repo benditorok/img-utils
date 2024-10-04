@@ -35,7 +35,7 @@ impl Default for ImageModifiers {
         Self {
             gamma: 2.2,
             log_base: 10.0,
-            box_filter_size: 1,
+            box_filter_size: 3,
         }
     }
 }

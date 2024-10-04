@@ -220,7 +220,7 @@ impl eframe::App for MyApp {
                     // Box filter size slider
                     ui.add(egui::Slider::new(
                         &mut self.image_modifiers.box_filter_size,
-                        0u32..=100u32,
+                        0u32..=80u32,
                     ));
                 });
 
