@@ -349,6 +349,16 @@ pub fn plot_histogram(histogram: &CudaHistogramData) -> anyhow::Result<DynamicIm
     Ok(img)
 }
 
+/// Balance the histogram of an image using libcudaimg.
+///
+/// # Arguments
+///
+/// * `libcudaimg` - The libcudaimg library.
+/// * `image` - The image to balance the histogram of.
+///
+/// # Returns
+///
+/// * The image with a balanced histogram.
 pub fn balance_histogram(
     libcudaimg: &Library,
     image: &DynamicImage,
