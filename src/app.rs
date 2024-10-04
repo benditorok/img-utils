@@ -189,13 +189,39 @@ impl eframe::App for MyApp {
                         if let Some(image) = &self.image {
                             let start = std::time::Instant::now();
                             let balanced_image =
-                                crate::cudaimg::balance_histogram(&self.libcudaimg, image)
+                                crate::cudaimg::balance_image_histogram(&self.libcudaimg, image)
                                     .expect("Failed to balance histogram");
                             self.last_operation_duration = Some(start.elapsed());
 
                             self.modified_image = Some(balanced_image);
                         }
                     }
+                });
+
+                // Box filter
+                ui.vertical(|ui| {
+                    if ui.button("Box filter").clicked() {
+                        self.texture_map.modified_image = None;
+
+                        if let Some(image) = &self.image {
+                            let start = std::time::Instant::now();
+                            let modified_image = crate::cudaimg::box_filter(
+                                &self.libcudaimg,
+                                image,
+                                self.image_modifiers.box_filter_size,
+                            )
+                            .expect("Failed to use Box filter on image");
+                            self.last_operation_duration = Some(start.elapsed());
+
+                            self.modified_image = Some(modified_image);
+                        }
+                    }
+
+                    // Box filter size slider
+                    ui.add(egui::Slider::new(
+                        &mut self.image_modifiers.box_filter_size,
+                        0u32..=100u32,
+                    ));
                 });
 
                 // ... other image processing tools

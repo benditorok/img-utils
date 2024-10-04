@@ -31,6 +31,10 @@ type ComputeHistogramFn = unsafe extern "C" fn(
 type BalanceHistogramFn =
     unsafe extern "C" fn(image: *mut u8, image_len: u32, width: u32, height: u32);
 
+/// Definition of the boxFilter function from libcudaimg.
+type BoxFilterFn =
+    unsafe extern "C" fn(image: *mut u8, image_len: u32, width: u32, height: u32, filter_size: u32);
+
 /// Trait to convert an image to CudaImageData.
 pub trait ToCudaImageData {
     fn to_cuda_image_data(&self) -> CudaImageData;
@@ -359,7 +363,7 @@ pub fn plot_histogram(histogram: &CudaHistogramData) -> anyhow::Result<DynamicIm
 /// # Returns
 ///
 /// * The image with a balanced histogram.
-pub fn balance_histogram(
+pub fn balance_image_histogram(
     libcudaimg: &Library,
     image: &DynamicImage,
 ) -> anyhow::Result<DynamicImage> {
@@ -379,6 +383,39 @@ pub fn balance_histogram(
             img.raw_len,
             img.width * img.pixel_size,
             img.height,
+        );
+    }
+
+    // Create a new image from the modified bytes
+    let modified_image = image::DynamicImage::ImageRgb8(
+        image::RgbImage::from_raw(img.width, img.height, img.bytes)
+            .expect("Failed to create the modified image from bytes"),
+    );
+
+    Ok(modified_image)
+}
+
+pub fn box_filter(
+    libcudaimg: &Library,
+    image: &DynamicImage,
+    filter_size: u32,
+) -> anyhow::Result<DynamicImage> {
+    // Get the invertImage function from the library
+    let process_image: Symbol<BoxFilterFn> = unsafe { libcudaimg.get(b"boxFilter\0")? };
+
+    // Get the image data
+    let mut img = image.to_cuda_image_data();
+
+    info!("Image width: {}, height: {}", img.width, img.height);
+
+    // Call the processImage function (invert the image)
+    unsafe {
+        process_image(
+            img.bytes.as_mut_ptr(),
+            img.raw_len,
+            img.width * img.pixel_size,
+            img.height,
+            filter_size,
         );
     }
 

@@ -27,6 +27,7 @@ struct TextureMap {
 struct ImageModifiers {
     pub gamma: f32,
     pub log_base: f32,
+    pub box_filter_size: u32,
 }
 
 impl Default for ImageModifiers {
@@ -34,6 +35,7 @@ impl Default for ImageModifiers {
         Self {
             gamma: 2.2,
             log_base: 10.0,
+            box_filter_size: 1,
         }
     }
 }
