@@ -38,7 +38,7 @@ impl eframe::App for MyApp {
             // Image selection and other information
             ui.horizontal(|ui| {
                 // Select image button
-                if ui.button("Select Image").clicked() {
+                if ui.button("Open Image").clicked() {
                     if let Some(path) = FileDialog::new()
                         .add_filter("Image Files", &["jpg", "jpeg", "png"])
                         .pick_file()
@@ -53,6 +53,18 @@ impl eframe::App for MyApp {
                         if let Some(image_path) = &self.image_path {
                             let image = image::open(image_path).expect("Failed to open image");
                             self.image = Some(image);
+                        }
+                    }
+                }
+
+                if ui.button("Save image").clicked() {
+                    if let Some(image) = &self.modified_image {
+                        if let Some(path) = FileDialog::new()
+                            .add_filter("Image Files", &["jpg", "jpeg", "png"])
+                            .save_file()
+                        {
+                            image.save(&path).expect("Failed to save image");
+                            self.modified_image_path = Some(path.display().to_string());
                         }
                     }
                 }
