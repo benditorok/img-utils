@@ -6,8 +6,6 @@ use rfd::FileDialog;
 #[allow(unused)]
 pub struct MyApp {
     libcudaimg: Library,
-    image_path: Option<String>,
-    modified_image_path: Option<String>,
     image: Option<DynamicImage>,
     modified_image: Option<DynamicImage>,
     texture_map: TextureMap,
@@ -19,8 +17,6 @@ impl MyApp {
     pub fn new(libcudaimg: Library) -> Self {
         Self {
             libcudaimg,
-            image_path: None,
-            modified_image_path: None,
             image: None,
             modified_image: None,
             texture_map: TextureMap::default(),
@@ -57,16 +53,8 @@ impl eframe::App for MyApp {
                             .save_file()
                         {
                             image.save(&path).expect("Failed to save image");
-                            self.modified_image_path = Some(path.display().to_string());
                         }
                     }
-                }
-
-                // Display the image path
-                if let Some(image_path) = &self.image_path {
-                    ui.label(format!("Image Path: {}", image_path));
-                } else {
-                    ui.label("No image selected");
                 }
 
                 // Display the last operation duration
