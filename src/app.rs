@@ -37,26 +37,19 @@ impl eframe::App for MyApp {
 
             // Image selection and other information
             ui.horizontal(|ui| {
-                // Select image button
+                // Open image button
                 if ui.button("Open Image").clicked() {
                     if let Some(path) = FileDialog::new()
                         .add_filter("Image Files", &["jpg", "jpeg", "png"])
                         .pick_file()
                     {
-                        self.image_path = Some(path.display().to_string());
-                        self.image = None;
+                        self.image = Some(image::open(&path).expect("Failed to open image"));
                         self.modified_image = None;
                         self.texture_map = TextureMap::default();
                     }
-
-                    if self.image.is_none() {
-                        if let Some(image_path) = &self.image_path {
-                            let image = image::open(image_path).expect("Failed to open image");
-                            self.image = Some(image);
-                        }
-                    }
                 }
 
+                // Save image button
                 if ui.button("Save image").clicked() {
                     if let Some(image) = &self.modified_image {
                         if let Some(path) = FileDialog::new()
@@ -90,7 +83,7 @@ impl eframe::App for MyApp {
 
             // Image processing tools
             ui.horizontal(|ui| {
-                // Invert image button
+                // Invert image
                 if ui.button("Invert image").clicked() {
                     self.texture_map.modified_image = None;
 
@@ -149,7 +142,7 @@ impl eframe::App for MyApp {
                         }
                     }
 
-                    // Gamma slider
+                    // Logarithmic base slider
                     ui.add(egui::Slider::new(
                         &mut self.image_modifiers.log_base,
                         0.1..=100f32,

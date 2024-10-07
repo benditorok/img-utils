@@ -3,7 +3,7 @@ use libloading::{Library, Symbol};
 use log::info;
 use plotters::prelude::*;
 
-/// Definition of the processImage function from libcudaimg.
+/// Definition of the invertImage function from libcudaimg.
 type InvertImageFn = unsafe extern "C" fn(image: *mut u8, image_len: u32, width: u32, height: u32);
 
 /// Definition of the gammaTransformImage function from libcudaimg.
@@ -14,11 +14,11 @@ type GammaTransformImage =
 type LogarithmicTransformImage =
     unsafe extern "C" fn(image: *mut u8, image_len: u32, width: u32, height: u32, base: f32);
 
-/// Definition of the processImage function from libcudaimg.
+/// Definition of the grayscaleImage function from libcudaimg.
 type GrayscaleImageFn =
     unsafe extern "C" fn(image: *mut u8, image_len: u32, width: u32, height: u32);
 
-/// Definition of the processImage function from libcudaimg.
+/// Definition of the computeHistogram function from libcudaimg.
 type ComputeHistogramFn = unsafe extern "C" fn(
     image: *mut u8,
     image_len: u32,
@@ -62,7 +62,7 @@ impl ToCudaImageData for DynamicImage {
     ///
     /// # Arguments
     ///
-    /// * `image` - The DynamicImage to get the data from.
+    /// * `self` - The DynamicImage to get the data from.
     ///
     /// # Returns
     ///
@@ -118,7 +118,7 @@ pub fn invert_image(libcudaimg: &Library, image: &DynamicImage) -> anyhow::Resul
 
     info!("Image width: {}, height: {}", img.width, img.height);
 
-    // Call the processImage function (invert the image)
+    // Call the invertImage function
     unsafe {
         process_image(
             img.bytes.as_mut_ptr(),
@@ -162,7 +162,7 @@ pub fn gamma_transform_image(
 
     info!("Image width: {}, height: {}", img.width, img.height);
 
-    // Call the processImage function (invert the image)
+    // Call the gammaTransformImage function
     unsafe {
         process_image(
             img.bytes.as_mut_ptr(),
@@ -207,7 +207,7 @@ pub fn logarithmic_transform_image(
 
     info!("Image width: {}, height: {}", img.width, img.height);
 
-    // Call the processImage function (invert the image)
+    // Call the logarithmicTransformImage function
     unsafe {
         process_image(
             img.bytes.as_mut_ptr(),
@@ -246,7 +246,7 @@ pub fn grayscale_image(libcudaimg: &Library, image: &DynamicImage) -> anyhow::Re
 
     info!("Image width: {}, height: {}", img.width, img.height);
 
-    // Call the processImage function (invert the image)
+    // Call the grayscaleImage function
     unsafe {
         process_image(
             img.bytes.as_mut_ptr(),
@@ -290,7 +290,7 @@ pub fn compute_histogram(
 
     info!("Image width: {}, height: {}", img.width, img.height);
 
-    // Call the processImage function (invert the image)
+    // Call the computeHistogram function
     unsafe {
         process_image(
             img.bytes.as_mut_ptr(),
@@ -376,7 +376,7 @@ pub fn balance_image_histogram(
 
     info!("Image width: {}, height: {}", img.width, img.height);
 
-    // Call the processImage function (invert the image)
+    // Call the balanceHistogram function
     unsafe {
         process_image(
             img.bytes.as_mut_ptr(),
@@ -408,7 +408,7 @@ pub fn box_filter(
 
     info!("Image width: {}, height: {}", img.width, img.height);
 
-    // Call the processImage function (invert the image)
+    // Call the boxFilter function
     unsafe {
         process_image(
             img.bytes.as_mut_ptr(),
