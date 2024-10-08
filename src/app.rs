@@ -49,6 +49,8 @@ impl eframe::App for MyApp {
                             self.modified_image = None;
                             self.texture_map = TextureMap::default();
                         }
+
+                        ui.close_menu();
                     }
 
                     // Save image button
@@ -67,6 +69,8 @@ impl eframe::App for MyApp {
                                 image.save(&path).expect("Failed to save image");
                             }
                         }
+
+                        ui.close_menu();
                     }
                 });
             });
@@ -74,20 +78,6 @@ impl eframe::App for MyApp {
 
         // Main window contents
         egui::CentralPanel::default().show(ctx, |ui| {
-            // Image selection and other information
-            ui.horizontal(|ui| {
-                // Display the duration of the last operation
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    if let Some(duration) = self.last_operation_duration {
-                        ui.label(format!("Last operation duration: {:?}", duration));
-                    } else {
-                        ui.label("No operation performed yet");
-                    }
-                });
-            });
-
-            ui.separator();
-
             // Image processing tools
             ui.horizontal(|ui| {
                 // Invert image
@@ -286,6 +276,20 @@ impl eframe::App for MyApp {
 
                         ui.show_resized_texture(texture);
                     }
+                });
+
+                egui::TopBottomPanel::bottom("info").show(ctx, |ui| {
+                    // Image selection and other information
+                    ui.horizontal(|ui| {
+                        // Display the duration of the last operation
+                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                            if let Some(duration) = self.last_operation_duration {
+                                ui.label(format!("Last operation duration: {:?}", duration));
+                            } else {
+                                ui.label("No operation performed yet");
+                            }
+                        });
+                    });
                 });
             });
         });
