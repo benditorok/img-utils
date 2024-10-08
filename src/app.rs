@@ -1,31 +1,41 @@
-use std::path::PathBuf;
-
-use crate::{ImageModifiers, ShowResizedTexture, TextureMap, ToColorImage};
+use crate::{ImageModifiers, ImageProcessingTask, ShowResizedTexture, TextureMap, ToColorImage};
 use image::DynamicImage;
 use libloading::Library;
 use rfd::FileDialog;
+use std::path::PathBuf;
+use std::sync::{Arc, Mutex};
+use tokio::sync::mpsc;
+use tokio::task;
 
 #[allow(unused)]
 pub struct MyApp {
     libcudaimg: Library,
     image: Option<DynamicImage>,
-    image_path_info: Option<PathBuf>,
     modified_image: Option<DynamicImage>,
+    image_path_info: Option<PathBuf>,
     texture_map: TextureMap,
     image_modifiers: ImageModifiers,
     last_operation_duration: Option<std::time::Duration>,
+    op_in_progress: Arc<Mutex<bool>>,
+    tx: mpsc::Sender<ImageProcessingTask>,
+    rx: mpsc::Receiver<ImageProcessingTask>,
 }
 
 impl MyApp {
     pub fn new(libcudaimg: Library) -> Self {
+        let (tx, rx) = mpsc::channel(32);
+
         Self {
             libcudaimg,
             image: None,
-            image_path_info: None,
             modified_image: None,
+            image_path_info: None,
             texture_map: TextureMap::default(),
             image_modifiers: ImageModifiers::default(),
             last_operation_duration: None,
+            op_in_progress: Arc::new(Mutex::new(false)),
+            tx,
+            rx,
         }
     }
 }
@@ -39,15 +49,34 @@ impl eframe::App for MyApp {
                 ui.menu_button("File", |ui| {
                     // Open image button
                     if ui.button("Open Image").clicked() {
-                        if let Some(path) = FileDialog::new()
-                            .add_filter("Image Files", &["jpg", "jpeg", "png"])
-                            .pick_file()
-                        {
-                            self.image = Some(image::open(&path).expect("Failed to open image"));
-                            self.image_path_info = Some(path);
-                            self.modified_image = None;
-                            self.texture_map = TextureMap::default();
-                        }
+                        self.image_path_info = None;
+                        self.modified_image = None;
+                        self.texture_map = TextureMap::default();
+
+                        let tx = self.tx.clone();
+                        *self.op_in_progress.lock().unwrap() = true;
+
+                        tokio::spawn(async move {
+                            if let Some(path) = FileDialog::new()
+                                .add_filter("Image Files", &["jpg", "jpeg", "png"])
+                                .pick_file()
+                            {
+                                let image = image::open(&path).expect("Failed to open image");
+                                tx.send(ImageProcessingTask::OpenImage { image, path })
+                                    .await
+                                    .unwrap();
+                            }
+                        });
+
+                        // if let Some(path) = FileDialog::new()
+                        //     .add_filter("Image Files", &["jpg", "jpeg", "png"])
+                        //     .pick_file()
+                        // {
+                        //     self.image = Some(image::open(&path).expect("Failed to open image"));
+                        //     self.image_path_info = Some(path);
+                        //     self.modified_image = None;
+                        //     self.texture_map = TextureMap::default();
+                        // }
 
                         ui.close_menu();
                     }
@@ -293,6 +322,10 @@ impl eframe::App for MyApp {
                 egui::TopBottomPanel::bottom("bottom_panel").show(ctx, |ui| {
                     // Image selection and other information
                     ui.horizontal(|ui| {
+                        if *self.op_in_progress.lock().unwrap() {
+                            ui.label("Operation in progress...");
+                        }
+
                         // Display the duration of the last operation
                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                             if let Some(duration) = self.last_operation_duration {
@@ -305,5 +338,20 @@ impl eframe::App for MyApp {
                 });
             });
         });
+
+        // Handle results from async tasks
+        while let Ok(result) = self.rx.try_recv() {
+            match result {
+                ImageProcessingTask::OpenImage { image, path } => {
+                    self.image = Some(image);
+                    self.image_path_info = Some(path);
+                    *self.op_in_progress.lock().unwrap() = false;
+                }
+                ImageProcessingTask::OperationFinished(modified_image) => {
+                    self.modified_image = Some(modified_image);
+                    *self.op_in_progress.lock().unwrap() = false;
+                }
+            }
+        }
     }
 }

@@ -1,6 +1,6 @@
 use egui::{ColorImage, ImageSource, TextureHandle};
 use image::DynamicImage;
-use std::{borrow::Cow, sync::Arc};
+use std::{borrow::Cow, path::PathBuf, sync::Arc};
 
 pub mod app;
 pub mod cudaimg;
@@ -105,4 +105,12 @@ impl ShowResizedTexture for egui::Ui {
 
         self.allocate_space(desired_size);
     }
+}
+
+enum ImageProcessingTask {
+    OpenImage {
+        image: image::DynamicImage,
+        path: PathBuf,
+    },
+    OperationFinished(image::DynamicImage),
 }
