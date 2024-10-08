@@ -73,6 +73,56 @@ impl eframe::App for MyApp {
                         ui.close_menu();
                     }
                 });
+
+                // Tools menu
+                ui.menu_button("Tools", |ui| {
+                    // Invert image
+                    if ui.button("Invert image").clicked() {
+                        self.texture_map.modified_image = None;
+
+                        if let Some(image) = &self.image {
+                            let start = std::time::Instant::now();
+                            let modified_image =
+                                crate::cudaimg::invert_image(&self.libcudaimg, image)
+                                    .expect("Failed to invert image");
+                            self.last_operation_duration = Some(start.elapsed());
+
+                            self.modified_image = Some(modified_image);
+                        }
+
+                        ui.close_menu();
+                    }
+
+                    // Gamma transformation
+                    ui.menu_button("Gamma transformation", |ui| {
+                        if ui.button("Run").clicked() {
+                            self.texture_map.modified_image = None;
+
+                            if let Some(image) = &self.image {
+                                let start = std::time::Instant::now();
+                                let modified_image = crate::cudaimg::gamma_transform_image(
+                                    &self.libcudaimg,
+                                    image,
+                                    self.image_modifiers.gamma,
+                                )
+                                .expect("Failed to use gamma transformation on image");
+                                self.last_operation_duration = Some(start.elapsed());
+
+                                self.modified_image = Some(modified_image);
+                            }
+
+                            ui.close_menu();
+                        }
+
+                        ui.label("Gamma value");
+
+                        // Gamma slider
+                        ui.add(egui::Slider::new(
+                            &mut self.image_modifiers.gamma,
+                            0.1..=5.0,
+                        ));
+                    });
+                });
             });
         });
 
