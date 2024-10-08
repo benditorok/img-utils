@@ -29,35 +29,38 @@ impl MyApp {
 impl eframe::App for MyApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
-            ui.separator();
+            // Menu bar
+            egui::menu::bar(ui, |ui| {
+                // File menu
+                ui.menu_button("File", |ui| {
+                    if ui.button("Open Image").clicked() {
+                        if let Some(path) = FileDialog::new()
+                            .add_filter("Image Files", &["jpg", "jpeg", "png"])
+                            .pick_file()
+                        {
+                            self.image = Some(image::open(&path).expect("Failed to open image"));
+                            self.modified_image = None;
+                            self.texture_map = TextureMap::default();
+                        }
+                    }
+
+                    // Save image button
+                    if ui.button("Save image").clicked() {
+                        if let Some(image) = &self.modified_image {
+                            if let Some(path) = FileDialog::new()
+                                .add_filter("Image Files", &["jpg", "jpeg", "png"])
+                                .save_file()
+                            {
+                                image.save(&path).expect("Failed to save image");
+                            }
+                        }
+                    }
+                });
+            });
 
             // Image selection and other information
             ui.horizontal(|ui| {
-                // Open image button
-                if ui.button("Open Image").clicked() {
-                    if let Some(path) = FileDialog::new()
-                        .add_filter("Image Files", &["jpg", "jpeg", "png"])
-                        .pick_file()
-                    {
-                        self.image = Some(image::open(&path).expect("Failed to open image"));
-                        self.modified_image = None;
-                        self.texture_map = TextureMap::default();
-                    }
-                }
-
-                // Save image button
-                if ui.button("Save image").clicked() {
-                    if let Some(image) = &self.modified_image {
-                        if let Some(path) = FileDialog::new()
-                            .add_filter("Image Files", &["jpg", "jpeg", "png"])
-                            .save_file()
-                        {
-                            image.save(&path).expect("Failed to save image");
-                        }
-                    }
-                }
-
-                // Display the last operation duration
+                // Display the duration of the last operation
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     if let Some(duration) = self.last_operation_duration {
                         ui.label(format!("Last operation duration: {:?}", duration));
