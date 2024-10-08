@@ -122,83 +122,39 @@ impl eframe::App for MyApp {
                             0.1..=5.0,
                         ));
                     });
-                });
-            });
-        });
 
-        // Main window contents
-        egui::CentralPanel::default().show(ctx, |ui| {
-            // Image processing tools
-            ui.horizontal(|ui| {
-                // Invert image
-                if ui.button("Invert image").clicked() {
-                    self.texture_map.modified_image = None;
+                    // Logarithmic transformation
+                    ui.menu_button("Logarithmic transformation", |ui| {
+                        if ui.button("Run").clicked() {
+                            self.texture_map.modified_image = None;
 
-                    if let Some(image) = &self.image {
-                        let start = std::time::Instant::now();
-                        let modified_image = crate::cudaimg::invert_image(&self.libcudaimg, image)
-                            .expect("Failed to invert image");
-                        self.last_operation_duration = Some(start.elapsed());
+                            if let Some(image) = &self.image {
+                                let start = std::time::Instant::now();
+                                let modified_image = crate::cudaimg::logarithmic_transform_image(
+                                    &self.libcudaimg,
+                                    image,
+                                    self.image_modifiers.log_base,
+                                )
+                                .expect("Failed to use logarithmic transformation on image");
+                                self.last_operation_duration = Some(start.elapsed());
 
-                        self.modified_image = Some(modified_image);
-                    }
-                }
+                                self.modified_image = Some(modified_image);
+                            }
 
-                // Gamma transformation
-                ui.vertical(|ui| {
-                    if ui.button("Gamma transformation").clicked() {
-                        self.texture_map.modified_image = None;
-
-                        if let Some(image) = &self.image {
-                            let start = std::time::Instant::now();
-                            let modified_image = crate::cudaimg::gamma_transform_image(
-                                &self.libcudaimg,
-                                image,
-                                self.image_modifiers.gamma,
-                            )
-                            .expect("Failed to use gamma transformation on image");
-                            self.last_operation_duration = Some(start.elapsed());
-
-                            self.modified_image = Some(modified_image);
+                            ui.close_menu();
                         }
-                    }
 
-                    // Gamma slider
-                    ui.add(egui::Slider::new(
-                        &mut self.image_modifiers.gamma,
-                        0.1..=5.0,
-                    ));
-                });
+                        ui.label("Logarithmic base value");
 
-                // Logarithmic transformation
-                ui.vertical(|ui| {
-                    if ui.button("Logarithmic transformation").clicked() {
-                        self.texture_map.modified_image = None;
+                        // Logarithmic base slider
+                        ui.add(egui::Slider::new(
+                            &mut self.image_modifiers.log_base,
+                            0.1..=100f32,
+                        ));
+                    });
 
-                        if let Some(image) = &self.image {
-                            let start = std::time::Instant::now();
-                            let modified_image = crate::cudaimg::logarithmic_transform_image(
-                                &self.libcudaimg,
-                                image,
-                                self.image_modifiers.log_base,
-                            )
-                            .expect("Failed to use logarithmic transformation on image");
-                            self.last_operation_duration = Some(start.elapsed());
-
-                            self.modified_image = Some(modified_image);
-                        }
-                    }
-
-                    // Logarithmic base slider
-                    ui.add(egui::Slider::new(
-                        &mut self.image_modifiers.log_base,
-                        0.1..=100f32,
-                    ));
-                });
-
-                // Convert to grayscale
-                ui.vertical(|ui| {
-                    if ui.button("Convert to grayscale").clicked() {
+                    // Grayscale conversion
+                    if ui.button("Grayscale conversion").clicked() {
                         self.texture_map.modified_image = None;
 
                         if let Some(image) = &self.image {
@@ -210,11 +166,11 @@ impl eframe::App for MyApp {
 
                             self.modified_image = Some(modified_image);
                         }
-                    }
-                });
 
-                // Generate histogram
-                ui.vertical(|ui| {
+                        ui.close_menu();
+                    }
+
+                    // Generate histogram
                     if ui.button("Generate histogram").clicked() {
                         self.texture_map.modified_image = None;
 
@@ -230,11 +186,11 @@ impl eframe::App for MyApp {
 
                             self.modified_image = Some(histogram);
                         }
-                    }
-                });
 
-                // Balance histogram
-                ui.vertical(|ui| {
+                        ui.close_menu();
+                    }
+
+                    // Balance histogram
                     if ui.button("Balance histogram").clicked() {
                         self.texture_map.modified_image = None;
 
@@ -247,38 +203,45 @@ impl eframe::App for MyApp {
 
                             self.modified_image = Some(balanced_image);
                         }
+
+                        ui.close_menu();
                     }
-                });
 
-                // Box filter
-                ui.vertical(|ui| {
-                    if ui.button("Box filter").clicked() {
-                        self.texture_map.modified_image = None;
+                    // Box filter
+                    ui.menu_button("Box filter", |ui| {
+                        if ui.button("Run").clicked() {
+                            self.texture_map.modified_image = None;
 
-                        if let Some(image) = &self.image {
-                            let start = std::time::Instant::now();
-                            let modified_image = crate::cudaimg::box_filter(
-                                &self.libcudaimg,
-                                image,
-                                self.image_modifiers.box_filter_size,
-                            )
-                            .expect("Failed to use Box filter on image");
-                            self.last_operation_duration = Some(start.elapsed());
+                            if let Some(image) = &self.image {
+                                let start = std::time::Instant::now();
+                                let modified_image = crate::cudaimg::box_filter(
+                                    &self.libcudaimg,
+                                    image,
+                                    self.image_modifiers.box_filter_size,
+                                )
+                                .expect("Failed to use Box filter on image");
+                                self.last_operation_duration = Some(start.elapsed());
 
-                            self.modified_image = Some(modified_image);
+                                self.modified_image = Some(modified_image);
+                            }
+
+                            ui.close_menu();
                         }
-                    }
 
-                    // Box filter size slider
-                    ui.add(egui::Slider::new(
-                        &mut self.image_modifiers.box_filter_size,
-                        0u32..=80u32,
-                    ));
+                        ui.label("Box filter size");
+
+                        // Box filter size slider
+                        ui.add(egui::Slider::new(
+                            &mut self.image_modifiers.box_filter_size,
+                            0u32..=80u32,
+                        ));
+                    });
                 });
-
-                // ... other image processing tools
             });
+        });
 
+        // Main window contents
+        egui::CentralPanel::default().show(ctx, |ui| {
             // Display the images side by side
             let available_height = ui.available_height();
             ui.horizontal(|ui| {
