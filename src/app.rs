@@ -33,8 +33,8 @@ impl MyApp {
 
 impl eframe::App for MyApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        // Menu bar
-        egui::TopBottomPanel::top("menu_bar").show(ctx, |ui| {
+        egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
+            // Menu bar
             egui::menu::bar(ui, |ui| {
                 // File menu
                 ui.menu_button("File", |ui| {
@@ -278,7 +278,7 @@ impl eframe::App for MyApp {
                     }
                 });
 
-                egui::TopBottomPanel::bottom("info").show(ctx, |ui| {
+                egui::TopBottomPanel::bottom("bottom_panel").show(ctx, |ui| {
                     // Image selection and other information
                     ui.horizontal(|ui| {
                         // Display the duration of the last operation
