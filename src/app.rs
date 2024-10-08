@@ -1,4 +1,7 @@
+use std::path::PathBuf;
+
 use crate::{ImageModifiers, ShowResizedTexture, TextureMap, ToColorImage};
+use egui::epaint::tessellator::Path;
 use image::DynamicImage;
 use libloading::Library;
 use rfd::FileDialog;
@@ -7,6 +10,7 @@ use rfd::FileDialog;
 pub struct MyApp {
     libcudaimg: Library,
     image: Option<DynamicImage>,
+    image_path_info: Option<PathBuf>,
     modified_image: Option<DynamicImage>,
     texture_map: TextureMap,
     image_modifiers: ImageModifiers,
@@ -18,6 +22,7 @@ impl MyApp {
         Self {
             libcudaimg,
             image: None,
+            image_path_info: None,
             modified_image: None,
             texture_map: TextureMap::default(),
             image_modifiers: ImageModifiers::default(),
@@ -33,12 +38,14 @@ impl eframe::App for MyApp {
             egui::menu::bar(ui, |ui| {
                 // File menu
                 ui.menu_button("File", |ui| {
+                    // Open image button
                     if ui.button("Open Image").clicked() {
                         if let Some(path) = FileDialog::new()
                             .add_filter("Image Files", &["jpg", "jpeg", "png"])
                             .pick_file()
                         {
                             self.image = Some(image::open(&path).expect("Failed to open image"));
+                            self.image_path_info = Some(path);
                             self.modified_image = None;
                             self.texture_map = TextureMap::default();
                         }
@@ -47,8 +54,14 @@ impl eframe::App for MyApp {
                     // Save image button
                     if ui.button("Save image").clicked() {
                         if let Some(image) = &self.modified_image {
+                            let mut exts = vec!["jpg", "jpeg", "png"];
+
+                            if let Some(impath) = &self.image_path_info {
+                                exts = vec![impath.extension().unwrap().to_str().unwrap()];
+                            }
+
                             if let Some(path) = FileDialog::new()
-                                .add_filter("Image Files", &["jpg", "jpeg", "png"])
+                                .add_filter("Image Files", exts.as_slice())
                                 .save_file()
                             {
                                 image.save(&path).expect("Failed to save image");
