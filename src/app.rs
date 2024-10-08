@@ -49,14 +49,24 @@ impl eframe::App for MyApp {
                 ui.menu_button("File", |ui| {
                     // Open image button
                     if ui.button("Open Image").clicked() {
-                        self.image_path_info = None;
+                        self.image = None;
                         self.modified_image = None;
+                        self.image_path_info = None;
                         self.texture_map = TextureMap::default();
 
                         let tx = self.tx.clone();
-                        *self.op_in_progress.lock().unwrap() = true;
+                        let mut op_in_progress = Arc::clone(&self.op_in_progress);
 
                         tokio::spawn(async move {
+                            // Wait for the previous operation to finish
+                            while *op_in_progress.lock().unwrap() {
+                                tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                            }
+
+                            {
+                                *op_in_progress.lock().unwrap() = true;
+                            }
+
                             if let Some(path) = FileDialog::new()
                                 .add_filter("Image Files", &["jpg", "jpeg", "png"])
                                 .pick_file()
@@ -66,36 +76,62 @@ impl eframe::App for MyApp {
                                     .await
                                     .unwrap();
                             }
-                        });
 
-                        // if let Some(path) = FileDialog::new()
-                        //     .add_filter("Image Files", &["jpg", "jpeg", "png"])
-                        //     .pick_file()
-                        // {
-                        //     self.image = Some(image::open(&path).expect("Failed to open image"));
-                        //     self.image_path_info = Some(path);
-                        //     self.modified_image = None;
-                        //     self.texture_map = TextureMap::default();
-                        // }
+                            {
+                                *op_in_progress.lock().unwrap() = false;
+                            }
+                        });
 
                         ui.close_menu();
                     }
 
                     // Save image button
                     if ui.button("Save image").clicked() {
-                        if let Some(image) = &self.modified_image {
-                            let mut exts = vec!["jpg", "jpeg", "png"];
+                        if self.modified_image.is_some() {
+                            let tx = self.tx.clone();
+                            let mut op_in_progress = Arc::clone(&self.op_in_progress);
 
-                            if let Some(impath) = &self.image_path_info {
-                                exts = vec![impath.extension().unwrap().to_str().unwrap()];
-                            }
+                            let modified_image = self.modified_image.clone(); // TODO: avoid clone
+                            let image_path_info = self.image_path_info.clone(); // TODO: avoid clone
 
-                            if let Some(path) = FileDialog::new()
-                                .add_filter("Image Files", exts.as_slice())
-                                .save_file()
-                            {
-                                image.save(&path).expect("Failed to save image");
-                            }
+                            tokio::spawn(async move {
+                                // Wait for the previous operation to finish
+                                while *op_in_progress.lock().unwrap() {
+                                    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                                }
+
+                                {
+                                    *op_in_progress.lock().unwrap() = true;
+                                }
+
+                                if let Some(image) = modified_image {
+                                    let exts = if let Some(impath) = &image_path_info {
+                                        vec![impath
+                                            .extension()
+                                            .unwrap()
+                                            .to_str()
+                                            .unwrap()
+                                            .to_string()]
+                                    } else {
+                                        vec![
+                                            "jpg".to_string(),
+                                            "jpeg".to_string(),
+                                            "png".to_string(),
+                                        ]
+                                    };
+
+                                    if let Some(path) = FileDialog::new()
+                                        .add_filter("Image Files", exts.as_slice())
+                                        .save_file()
+                                    {
+                                        image.save(&path).expect("Failed to save image");
+                                    }
+                                }
+
+                                {
+                                    *op_in_progress.lock().unwrap() = false;
+                                }
+                            });
                         }
 
                         ui.close_menu();
@@ -324,6 +360,8 @@ impl eframe::App for MyApp {
                     ui.horizontal(|ui| {
                         if *self.op_in_progress.lock().unwrap() {
                             ui.label("Operation in progress...");
+                        } else if let Some(path) = &self.image_path_info {
+                            ui.label(format!("Image: {}", path.display()));
                         }
 
                         // Display the duration of the last operation
@@ -345,11 +383,9 @@ impl eframe::App for MyApp {
                 ImageProcessingTask::OpenImage { image, path } => {
                     self.image = Some(image);
                     self.image_path_info = Some(path);
-                    *self.op_in_progress.lock().unwrap() = false;
                 }
                 ImageProcessingTask::OperationFinished(modified_image) => {
                     self.modified_image = Some(modified_image);
-                    *self.op_in_progress.lock().unwrap() = false;
                 }
             }
         }
