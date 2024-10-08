@@ -1,7 +1,6 @@
 use std::path::PathBuf;
 
 use crate::{ImageModifiers, ShowResizedTexture, TextureMap, ToColorImage};
-use egui::epaint::tessellator::Path;
 use image::DynamicImage;
 use libloading::Library;
 use rfd::FileDialog;
