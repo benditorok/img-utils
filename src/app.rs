@@ -5,11 +5,12 @@ use rfd::FileDialog;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use tokio::sync::mpsc;
+use tokio::sync::Mutex as TokioMutex;
 use tokio::task;
 
 #[allow(unused)]
 pub struct MyApp {
-    libcudaimg: Library,
+    libcudaimg: Arc<TokioMutex<Library>>,
     image: Option<DynamicImage>,
     modified_image: Option<DynamicImage>,
     image_path_info: Option<PathBuf>,
@@ -26,7 +27,7 @@ impl MyApp {
         let (tx, rx) = mpsc::channel(32);
 
         Self {
-            libcudaimg,
+            libcudaimg: Arc::new(TokioMutex::new(libcudaimg)),
             image: None,
             modified_image: None,
             image_path_info: None,
@@ -55,7 +56,7 @@ impl eframe::App for MyApp {
                         self.texture_map = TextureMap::default();
 
                         let tx = self.tx.clone();
-                        let mut op_in_progress = Arc::clone(&self.op_in_progress);
+                        let op_in_progress = Arc::clone(&self.op_in_progress);
 
                         tokio::spawn(async move {
                             // Wait for the previous operation to finish
@@ -88,8 +89,7 @@ impl eframe::App for MyApp {
                     // Save image button
                     if ui.button("Save image").clicked() {
                         if self.modified_image.is_some() {
-                            let tx = self.tx.clone();
-                            let mut op_in_progress = Arc::clone(&self.op_in_progress);
+                            let op_in_progress = Arc::clone(&self.op_in_progress);
 
                             let modified_image = self.modified_image.clone(); // TODO: avoid clone
                             let image_path_info = self.image_path_info.clone(); // TODO: avoid clone
@@ -144,15 +144,42 @@ impl eframe::App for MyApp {
                     if ui.button("Invert image").clicked() {
                         self.texture_map.modified_image = None;
 
-                        if let Some(image) = &self.image {
-                            let start = std::time::Instant::now();
-                            let modified_image =
-                                crate::cudaimg::invert_image(&self.libcudaimg, image)
-                                    .expect("Failed to invert image");
-                            self.last_operation_duration = Some(start.elapsed());
+                        let tx = self.tx.clone();
+                        let op_in_progress = Arc::clone(&self.op_in_progress);
 
-                            self.modified_image = Some(modified_image);
-                        }
+                        let image = self.image.clone(); // TODO: avoid clone
+                        let library = Arc::clone(&self.libcudaimg);
+
+                        tokio::spawn(async move {
+                            // Wait for the previous operation to finish
+                            while *op_in_progress.lock().unwrap() {
+                                tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                            }
+
+                            {
+                                *op_in_progress.lock().unwrap() = true;
+                            }
+
+                            if let Some(image) = image {
+                                let library = library.lock().await;
+
+                                let start = std::time::Instant::now();
+                                let modified_image = crate::cudaimg::invert_image(&library, &image)
+                                    .expect("Failed to invert image");
+
+                                let duration = start.elapsed();
+                                tx.send(ImageProcessingTask::OperationFinished {
+                                    image: modified_image,
+                                    duration,
+                                })
+                                .await
+                                .unwrap();
+                            }
+
+                            {
+                                *op_in_progress.lock().unwrap() = false;
+                            }
+                        });
 
                         ui.close_menu();
                     }
@@ -162,18 +189,45 @@ impl eframe::App for MyApp {
                         if ui.button("Run").clicked() {
                             self.texture_map.modified_image = None;
 
-                            if let Some(image) = &self.image {
-                                let start = std::time::Instant::now();
-                                let modified_image = crate::cudaimg::gamma_transform_image(
-                                    &self.libcudaimg,
-                                    image,
-                                    self.image_modifiers.gamma,
-                                )
-                                .expect("Failed to use gamma transformation on image");
-                                self.last_operation_duration = Some(start.elapsed());
+                            let tx = self.tx.clone();
+                            let op_in_progress = Arc::clone(&self.op_in_progress);
 
-                                self.modified_image = Some(modified_image);
-                            }
+                            let image = self.image.clone(); // TODO: avoid clone
+                            let library = Arc::clone(&self.libcudaimg);
+                            let gamma = self.image_modifiers.gamma.clone();
+
+                            tokio::spawn(async move {
+                                // Wait for the previous operation to finish
+                                while *op_in_progress.lock().unwrap() {
+                                    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                                }
+
+                                {
+                                    *op_in_progress.lock().unwrap() = true;
+                                }
+
+                                if let Some(image) = image {
+                                    let library = library.lock().await;
+
+                                    let start = std::time::Instant::now();
+                                    let modified_image = crate::cudaimg::gamma_transform_image(
+                                        &library, &image, gamma,
+                                    )
+                                    .expect("Failed to use gamma transformation on image");
+
+                                    let duration = start.elapsed();
+                                    tx.send(ImageProcessingTask::OperationFinished {
+                                        image: modified_image,
+                                        duration,
+                                    })
+                                    .await
+                                    .unwrap();
+                                }
+
+                                {
+                                    *op_in_progress.lock().unwrap() = false;
+                                }
+                            });
 
                             ui.close_menu();
                         }
@@ -192,18 +246,48 @@ impl eframe::App for MyApp {
                         if ui.button("Run").clicked() {
                             self.texture_map.modified_image = None;
 
-                            if let Some(image) = &self.image {
-                                let start = std::time::Instant::now();
-                                let modified_image = crate::cudaimg::logarithmic_transform_image(
-                                    &self.libcudaimg,
-                                    image,
-                                    self.image_modifiers.log_base,
-                                )
-                                .expect("Failed to use logarithmic transformation on image");
-                                self.last_operation_duration = Some(start.elapsed());
+                            let tx = self.tx.clone();
+                            let op_in_progress = Arc::clone(&self.op_in_progress);
 
-                                self.modified_image = Some(modified_image);
-                            }
+                            let image = self.image.clone(); // TODO: avoid clone
+                            let library = Arc::clone(&self.libcudaimg);
+                            let log_base = self.image_modifiers.log_base.clone();
+
+                            tokio::spawn(async move {
+                                // Wait for the previous operation to finish
+                                while *op_in_progress.lock().unwrap() {
+                                    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                                }
+
+                                {
+                                    *op_in_progress.lock().unwrap() = true;
+                                }
+
+                                if let Some(image) = image {
+                                    let library = library.lock().await;
+
+                                    let start = std::time::Instant::now();
+                                    let modified_image =
+                                        crate::cudaimg::logarithmic_transform_image(
+                                            &library, &image, log_base,
+                                        )
+                                        .expect(
+                                            "Failed to use logarithmic transformation on image",
+                                        );
+
+                                    let duration = start.elapsed();
+                                    tx.send(ImageProcessingTask::OperationFinished {
+                                        image: modified_image,
+                                        duration,
+                                    })
+                                    .await
+                                    .unwrap();
+                                }
+
+                                {
+                                    *op_in_progress.lock().unwrap() = false;
+                                }
+                            });
 
                             ui.close_menu();
                         }
@@ -221,15 +305,43 @@ impl eframe::App for MyApp {
                     if ui.button("Grayscale conversion").clicked() {
                         self.texture_map.modified_image = None;
 
-                        if let Some(image) = &self.image {
-                            let start = std::time::Instant::now();
-                            let modified_image =
-                                crate::cudaimg::grayscale_image(&self.libcudaimg, image)
-                                    .expect("Failed to convert to grayscale");
-                            self.last_operation_duration = Some(start.elapsed());
+                        let tx = self.tx.clone();
+                        let op_in_progress = Arc::clone(&self.op_in_progress);
 
-                            self.modified_image = Some(modified_image);
-                        }
+                        let image = self.image.clone(); // TODO: avoid clone
+                        let library = Arc::clone(&self.libcudaimg);
+
+                        tokio::spawn(async move {
+                            // Wait for the previous operation to finish
+                            while *op_in_progress.lock().unwrap() {
+                                tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                            }
+
+                            {
+                                *op_in_progress.lock().unwrap() = true;
+                            }
+
+                            if let Some(image) = image {
+                                let library = library.lock().await;
+
+                                let start = std::time::Instant::now();
+                                let modified_image =
+                                    crate::cudaimg::grayscale_image(&library, &image)
+                                        .expect("Failed to convert to grayscale");
+
+                                let duration = start.elapsed();
+                                tx.send(ImageProcessingTask::OperationFinished {
+                                    image: modified_image,
+                                    duration,
+                                })
+                                .await
+                                .unwrap();
+                            }
+
+                            {
+                                *op_in_progress.lock().unwrap() = false;
+                            }
+                        });
 
                         ui.close_menu();
                     }
@@ -238,18 +350,44 @@ impl eframe::App for MyApp {
                     if ui.button("Generate histogram").clicked() {
                         self.texture_map.modified_image = None;
 
-                        if let Some(image) = &self.image {
-                            let start = std::time::Instant::now();
-                            let histogram =
-                                crate::cudaimg::compute_histogram(&self.libcudaimg, image)
+                        let tx = self.tx.clone();
+                        let op_in_progress = Arc::clone(&self.op_in_progress);
+
+                        let image = self.image.clone(); // TODO: avoid clone
+                        let library = Arc::clone(&self.libcudaimg);
+
+                        tokio::spawn(async move {
+                            // Wait for the previous operation to finish
+                            while *op_in_progress.lock().unwrap() {
+                                tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                            }
+
+                            {
+                                *op_in_progress.lock().unwrap() = true;
+                            }
+
+                            if let Some(image) = image {
+                                let library = library.lock().await;
+
+                                let start = std::time::Instant::now();
+                                let histogram = crate::cudaimg::compute_histogram(&library, &image)
                                     .expect("Failed to generate histogram");
-                            self.last_operation_duration = Some(start.elapsed());
+                                let histogram = crate::cudaimg::plot_histogram(&histogram)
+                                    .expect("Failed to plot histogram");
 
-                            let histogram = crate::cudaimg::plot_histogram(&histogram)
-                                .expect("Failed to plot histogram");
+                                let duration = start.elapsed();
+                                tx.send(ImageProcessingTask::OperationFinished {
+                                    image: histogram,
+                                    duration,
+                                })
+                                .await
+                                .unwrap();
+                            }
 
-                            self.modified_image = Some(histogram);
-                        }
+                            {
+                                *op_in_progress.lock().unwrap() = false;
+                            }
+                        });
 
                         ui.close_menu();
                     }
@@ -258,15 +396,43 @@ impl eframe::App for MyApp {
                     if ui.button("Balance histogram").clicked() {
                         self.texture_map.modified_image = None;
 
-                        if let Some(image) = &self.image {
-                            let start = std::time::Instant::now();
-                            let balanced_image =
-                                crate::cudaimg::balance_image_histogram(&self.libcudaimg, image)
-                                    .expect("Failed to balance histogram");
-                            self.last_operation_duration = Some(start.elapsed());
+                        let tx = self.tx.clone();
+                        let op_in_progress = Arc::clone(&self.op_in_progress);
 
-                            self.modified_image = Some(balanced_image);
-                        }
+                        let image = self.image.clone(); // TODO: avoid clone
+                        let library = Arc::clone(&self.libcudaimg);
+
+                        tokio::spawn(async move {
+                            // Wait for the previous operation to finish
+                            while *op_in_progress.lock().unwrap() {
+                                tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                            }
+
+                            {
+                                *op_in_progress.lock().unwrap() = true;
+                            }
+
+                            if let Some(image) = image {
+                                let library = library.lock().await;
+
+                                let start = std::time::Instant::now();
+                                let modified_image =
+                                    crate::cudaimg::balance_image_histogram(&library, &image)
+                                        .expect("Failed to balance histogram");
+
+                                let duration = start.elapsed();
+                                tx.send(ImageProcessingTask::OperationFinished {
+                                    image: modified_image,
+                                    duration,
+                                })
+                                .await
+                                .unwrap();
+                            }
+
+                            {
+                                *op_in_progress.lock().unwrap() = false;
+                            }
+                        });
 
                         ui.close_menu();
                     }
@@ -276,18 +442,47 @@ impl eframe::App for MyApp {
                         if ui.button("Run").clicked() {
                             self.texture_map.modified_image = None;
 
-                            if let Some(image) = &self.image {
-                                let start = std::time::Instant::now();
-                                let modified_image = crate::cudaimg::box_filter(
-                                    &self.libcudaimg,
-                                    image,
-                                    self.image_modifiers.box_filter_size,
-                                )
-                                .expect("Failed to use Box filter on image");
-                                self.last_operation_duration = Some(start.elapsed());
+                            let tx = self.tx.clone();
+                            let op_in_progress = Arc::clone(&self.op_in_progress);
 
-                                self.modified_image = Some(modified_image);
-                            }
+                            let image = self.image.clone(); // TODO: avoid clone
+                            let library = Arc::clone(&self.libcudaimg);
+                            let box_filter_size = self.image_modifiers.box_filter_size.clone();
+
+                            tokio::spawn(async move {
+                                // Wait for the previous operation to finish
+                                while *op_in_progress.lock().unwrap() {
+                                    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                                }
+
+                                {
+                                    *op_in_progress.lock().unwrap() = true;
+                                }
+
+                                if let Some(image) = image {
+                                    let library = library.lock().await;
+
+                                    let start = std::time::Instant::now();
+                                    let modified_image = crate::cudaimg::box_filter(
+                                        &library,
+                                        &image,
+                                        box_filter_size,
+                                    )
+                                    .expect("Failed to use Box filter on image");
+
+                                    let duration = start.elapsed();
+                                    tx.send(ImageProcessingTask::OperationFinished {
+                                        image: modified_image,
+                                        duration,
+                                    })
+                                    .await
+                                    .unwrap();
+                                }
+
+                                {
+                                    *op_in_progress.lock().unwrap() = false;
+                                }
+                            });
 
                             ui.close_menu();
                         }
@@ -384,8 +579,9 @@ impl eframe::App for MyApp {
                     self.image = Some(image);
                     self.image_path_info = Some(path);
                 }
-                ImageProcessingTask::OperationFinished(modified_image) => {
-                    self.modified_image = Some(modified_image);
+                ImageProcessingTask::OperationFinished { image, duration } => {
+                    self.modified_image = Some(image);
+                    self.last_operation_duration = Some(duration);
                 }
             }
         }

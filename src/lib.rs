@@ -112,5 +112,8 @@ enum ImageProcessingTask {
         image: image::DynamicImage,
         path: PathBuf,
     },
-    OperationFinished(image::DynamicImage),
+    OperationFinished {
+        image: image::DynamicImage,
+        duration: std::time::Duration,
+    },
 }
