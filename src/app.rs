@@ -42,7 +42,7 @@ impl MyApp {
 }
 
 impl MyApp {
-    fn update_top_panel(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+    fn draw_top_panel(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             // Menu bar
             egui::menu::bar(ui, |ui| {
@@ -497,18 +497,24 @@ impl MyApp {
                     });
                 });
 
-                // Apply filter and replace the image with the modified one
-                ui.menu_button("Apply filter", |_ui| {
+                // Apply modification and replace the image with the modified one
+                ui.menu_button("Apply modification", |_ui| {
                     if let Some(modified_image) = self.modified_image.take() {
                         self.image = Some(modified_image);
                         self.texture_map = TextureMap::default();
                     }
                 });
+
+                // Remove the current modification
+                ui.menu_button("Remove modification", |_ui| {
+                    let _ = self.modified_image.take();
+                    self.texture_map = TextureMap::default();
+                });
             });
         });
     }
 
-    fn update_central_panel(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+    fn draw_central_panel(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         // Main window contents
         egui::CentralPanel::default().show(ctx, |ui| {
             // Display the images side by side
@@ -604,10 +610,10 @@ impl MyApp {
 impl eframe::App for MyApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         // Update the menu bar
-        self.update_top_panel(ctx, _frame);
+        self.draw_top_panel(ctx, _frame);
 
         // Update the main panel
-        self.update_central_panel(ctx, _frame);
+        self.draw_central_panel(ctx, _frame);
 
         // Post update
         self.post_update(ctx, _frame);
