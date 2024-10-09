@@ -19,3 +19,9 @@ This project currently runs only on Windows. For the _libcudaimg_ library to bui
 - Grayscale conversion
 - Histogram plotting
 - Histogram balancing
+
+## Requirements
+
+### Windows
+
+- Microsoft Visual C++ 2015 - 2022 Redistributable
