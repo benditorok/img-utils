@@ -496,6 +496,14 @@ impl eframe::App for MyApp {
                         ));
                     });
                 });
+
+                // Apply filter and replace the image with the modified one
+                ui.menu_button("Apply filter", |_ui| {
+                    if let Some(modified_image) = self.modified_image.take() {
+                        self.image = Some(modified_image);
+                        self.texture_map = TextureMap::default();
+                    }
+                });
             });
         });
 
@@ -581,9 +589,12 @@ impl eframe::App for MyApp {
                 }
                 ImageProcessingTask::OperationFinished { image, duration } => {
                     self.modified_image = Some(image);
+                    self.texture_map = TextureMap::default();
                     self.last_operation_duration = Some(duration);
                 }
             }
         }
+
+        ctx.request_repaint();
     }
 }
