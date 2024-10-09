@@ -41,8 +41,8 @@ impl MyApp {
     }
 }
 
-impl eframe::App for MyApp {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+impl MyApp {
+    fn update_top_panel(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             // Menu bar
             egui::menu::bar(ui, |ui| {
@@ -506,7 +506,9 @@ impl eframe::App for MyApp {
                 });
             });
         });
+    }
 
+    fn update_central_panel(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         // Main window contents
         egui::CentralPanel::default().show(ctx, |ui| {
             // Display the images side by side
@@ -579,7 +581,9 @@ impl eframe::App for MyApp {
                 });
             });
         });
+    }
 
+    fn post_update(&mut self, _ctx: &egui::Context, _frame: &mut eframe::Frame) {
         // Handle results from async tasks
         while let Ok(result) = self.rx.try_recv() {
             match result {
@@ -589,12 +593,26 @@ impl eframe::App for MyApp {
                 }
                 ImageProcessingTask::OperationFinished { image, duration } => {
                     self.modified_image = Some(image);
-                    self.texture_map = TextureMap::default();
+                    self.texture_map = TextureMap::default(); // TODO: reset only the modified image texture
                     self.last_operation_duration = Some(duration);
                 }
             }
         }
+    }
+}
 
+impl eframe::App for MyApp {
+    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        // Update the menu bar
+        self.update_top_panel(ctx, _frame);
+
+        // Update the main panel
+        self.update_central_panel(ctx, _frame);
+
+        // Post update
+        self.post_update(ctx, _frame);
+
+        // Important: tell the app to repaint after the update
         ctx.request_repaint();
     }
 }
