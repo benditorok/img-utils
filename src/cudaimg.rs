@@ -36,14 +36,12 @@ type BoxFilterFn =
     unsafe extern "C" fn(image: *mut u8, image_len: u32, width: u32, height: u32, filter_size: u32);
 
 // Definition of the gaussFilter function from libcudaimg.
-type GaussFilterFn = unsafe extern "C" fn(
-    image: *mut u8,
-    image_len: u32,
-    width: u32,
-    height: u32,
-    filter_size: u32,
-    sigma: f32,
-);
+type GaussFilterFn =
+    unsafe extern "C" fn(image: *mut u8, image_len: u32, width: u32, height: u32, sigma: f32);
+
+// Definition of the gaussFilter function from libcudaimg.
+type GaussianBlurFn =
+    unsafe extern "C" fn(image: *mut u8, image_len: u32, width: u32, height: u32, sigma: f32);
 
 /// Trait to convert an image to CudaImageData.
 pub trait ToCudaImageData {
@@ -163,7 +161,7 @@ pub fn gamma_transform_image(
     image: &DynamicImage,
     gamma: f32,
 ) -> anyhow::Result<DynamicImage> {
-    // Get the invertImage function from the library
+    // Get the gammaTransformImage function from the library
     let process_image: Symbol<GammaTransformImage> =
         unsafe { libcudaimg.get(b"gammaTransformImage\0")? };
 
@@ -208,7 +206,7 @@ pub fn logarithmic_transform_image(
     image: &DynamicImage,
     base: f32,
 ) -> anyhow::Result<DynamicImage> {
-    // Get the invertImage function from the library
+    // Get the logarithmicTransformImage function from the library
     let process_image: Symbol<LogarithmicTransformImage> =
         unsafe { libcudaimg.get(b"logarithmicTransformImage\0")? };
 
@@ -248,7 +246,7 @@ pub fn logarithmic_transform_image(
 ///
 /// * The grayscale image.
 pub fn grayscale_image(libcudaimg: &Library, image: &DynamicImage) -> anyhow::Result<DynamicImage> {
-    // Get the invertImage function from the library
+    // Get the grayscaleImage function from the library
     let process_image: Symbol<GrayscaleImageFn> = unsafe { libcudaimg.get(b"grayscaleImage\0")? };
 
     // Get the image data
@@ -289,7 +287,7 @@ pub fn compute_histogram(
     libcudaimg: &Library,
     image: &DynamicImage,
 ) -> anyhow::Result<CudaHistogramData> {
-    // Get the invertImage function from the library
+    // Get the computeHistogram function from the library
     let process_image: Symbol<ComputeHistogramFn> =
         unsafe { libcudaimg.get(b"computeHistogram\0")? };
 
@@ -377,7 +375,7 @@ pub fn balance_image_histogram(
     libcudaimg: &Library,
     image: &DynamicImage,
 ) -> anyhow::Result<DynamicImage> {
-    // Get the invertImage function from the library
+    // Get the balanceHistogram function from the library
     let process_image: Symbol<BalanceHistogramFn> =
         unsafe { libcudaimg.get(b"balanceHistogram\0")? };
 
@@ -421,7 +419,7 @@ pub fn box_filter(
     image: &DynamicImage,
     filter_size: u32,
 ) -> anyhow::Result<DynamicImage> {
-    // Get the invertImage function from the library
+    // Get the boxFilter function from the library
     let process_image: Symbol<BoxFilterFn> = unsafe { libcudaimg.get(b"boxFilter\0")? };
 
     // Get the image data
@@ -464,10 +462,9 @@ pub fn box_filter(
 pub fn gauss_filter(
     libcudaimg: &Library,
     image: &DynamicImage,
-    filter_size: u32,
     sigma: f32,
 ) -> anyhow::Result<DynamicImage> {
-    // Get the invertImage function from the library
+    // Get the gaussFilter function from the library
     let process_image: Symbol<GaussFilterFn> = unsafe { libcudaimg.get(b"gaussFilter\0")? };
 
     // Get the image data
@@ -482,7 +479,51 @@ pub fn gauss_filter(
             img.raw_len,
             img.width * img.pixel_size,
             img.height,
-            filter_size,
+            sigma,
+        );
+    }
+
+    // Create a new image from the modified bytes
+    let modified_image = image::DynamicImage::ImageRgb8(
+        image::RgbImage::from_raw(img.width, img.height, img.bytes)
+            .expect("Failed to create the modified image from bytes"),
+    );
+
+    Ok(modified_image)
+}
+
+/// Apply a Gaussian blur to an image using libcudaimg.
+///
+/// # Arguments
+///
+/// * `libcudaimg` - The libcudaimg library.
+/// * `image` - The image to filter.
+/// * `filter_size` - The size of the filter.
+/// * `sigma` - The sigma value to use.
+///
+/// # Returns
+///
+/// * The filtered image.
+pub fn gaussian_blur(
+    libcudaimg: &Library,
+    image: &DynamicImage,
+    sigma: f32,
+) -> anyhow::Result<DynamicImage> {
+    // Get the gaussianBlur function from the library
+    let process_image: Symbol<GaussFilterFn> = unsafe { libcudaimg.get(b"gaussianBlur\0")? };
+
+    // Get the image data
+    let mut img = image.to_cuda_image_data();
+
+    info!("Image width: {}, height: {}", img.width, img.height);
+
+    // Call the gaussianBlur function
+    unsafe {
+        process_image(
+            img.bytes.as_mut_ptr(),
+            img.raw_len,
+            img.width * img.pixel_size,
+            img.height,
             sigma,
         );
     }

@@ -489,8 +489,8 @@ impl MyApp {
                         ));
                     });
 
-                    // Gauss filter
-                    ui.menu_button("Gauss filter", |ui| {
+                    // Gaussian blur
+                    ui.menu_button("Gaussian blur", |ui| {
                         if ui.button("Run").clicked() {
                             self.texture_map.modified_image = None;
 
@@ -499,7 +499,6 @@ impl MyApp {
 
                             let image = self.image.clone(); // TODO: avoid clone
                             let library = Arc::clone(&self.libcudaimg);
-                            let filter_size = self.image_modifiers.box_filter_size;
                             let sigma = self.image_modifiers.gauss_sigma;
 
                             tokio::spawn(async move {
@@ -516,13 +515,9 @@ impl MyApp {
                                     let library = library.lock().await;
 
                                     let start = std::time::Instant::now();
-                                    let modified_image = crate::cudaimg::gauss_filter(
-                                        &library,
-                                        &image,
-                                        filter_size,
-                                        sigma,
-                                    )
-                                    .expect("Failed to use Gauss filter on image");
+                                    let modified_image =
+                                        crate::cudaimg::gaussian_blur(&library, &image, sigma)
+                                            .expect("Failed to use Gaussian blur on image");
 
                                     let duration = start.elapsed();
                                     tx.send(ImageProcessingTask::OperationFinished {
@@ -541,34 +536,30 @@ impl MyApp {
                             ui.close_menu();
                         }
 
-                        // Gauss filter size slider
-                        ui.label("Filter size");
-                        ui.add(egui::Slider::new(
-                            &mut self.image_modifiers.gauss_filter_size,
-                            0u32..=80u32,
-                        ));
-
                         // Gauss sigma slider
                         ui.label("Sigma");
                         ui.add(egui::Slider::new(
                             &mut self.image_modifiers.gauss_sigma,
-                            0.1..=10.0,
+                            0.1..=5.0,
                         ));
                     });
                 });
 
-                // Apply modification and replace the image with the modified one
-                ui.menu_button("Apply modification", |_ui| {
-                    if let Some(modified_image) = self.modified_image.take() {
-                        self.image = Some(modified_image);
-                        self.texture_map = TextureMap::default();
-                    }
-                });
+                // Display the duration of the last operation
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    // Apply modification and replace the image with the modified one
+                    ui.menu_button("Apply modification", |_ui| {
+                        if let Some(modified_image) = self.modified_image.take() {
+                            self.image = Some(modified_image);
+                            self.texture_map = TextureMap::default();
+                        }
+                    });
 
-                // Remove the current modification
-                ui.menu_button("Remove modification", |_ui| {
-                    let _ = self.modified_image.take();
-                    self.texture_map = TextureMap::default();
+                    // Remove the current modification
+                    ui.menu_button("Remove modification", |_ui| {
+                        let _ = self.modified_image.take();
+                        self.texture_map = TextureMap::default();
+                    });
                 });
             });
         });
