@@ -595,18 +595,18 @@ impl MyApp {
                 // Display the duration of the last operation
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     // Apply modification and replace the image with the modified one
-                    ui.menu_button("Apply modification", |_ui| {
+                    if ui.button("Apply current").clicked() {
                         if let Some(modified_image) = self.modified_image.take() {
                             self.image = Some(modified_image);
                             self.texture_map = TextureMap::default();
                         }
-                    });
+                    }
 
                     // Remove the current modification
-                    ui.menu_button("Remove modification", |_ui| {
+                    if ui.button("Remove current").clicked() {
                         let _ = self.modified_image.take();
                         self.texture_map = TextureMap::default();
-                    });
+                    }
                 });
             });
         });
