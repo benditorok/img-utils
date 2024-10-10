@@ -39,6 +39,10 @@ type BoxFilterFn =
 type GaussianBlurFn =
     unsafe extern "C" fn(image: *mut u8, image_len: u32, width: u32, height: u32, sigma: f32);
 
+/// Definition of the sobelEdgeDetection function from libcudaimg.
+type SobelEdgeDetectionFn =
+    unsafe extern "C" fn(image: *mut u8, image_len: u32, width: u32, height: u32);
+
 /// Trait to convert an image to CudaImageData.
 pub trait ToCudaImageData {
     fn to_cuda_image_data(&self) -> CudaImageData;
@@ -443,51 +447,6 @@ pub fn box_filter(
     Ok(modified_image)
 }
 
-/// Apply a Gaussian filter to an image using libcudaimg.
-///
-/// # Arguments
-///
-/// * `libcudaimg` - The libcudaimg library.
-/// * `image` - The image to filter.
-/// * `filter_size` - The size of the filter.
-/// * `sigma` - The sigma value to use.
-///
-/// # Returns
-///
-/// * The filtered image.
-pub fn gauss_filter(
-    libcudaimg: &Library,
-    image: &DynamicImage,
-    sigma: f32,
-) -> anyhow::Result<DynamicImage> {
-    // Get the gaussFilter function from the library
-    let process_image: Symbol<GaussFilterFn> = unsafe { libcudaimg.get(b"gaussFilter\0")? };
-
-    // Get the image data
-    let mut img = image.to_cuda_image_data();
-
-    info!("Image width: {}, height: {}", img.width, img.height);
-
-    // Call the gaussFilter function
-    unsafe {
-        process_image(
-            img.bytes.as_mut_ptr(),
-            img.raw_len,
-            img.width * img.pixel_size,
-            img.height,
-            sigma,
-        );
-    }
-
-    // Create a new image from the modified bytes
-    let modified_image = image::DynamicImage::ImageRgb8(
-        image::RgbImage::from_raw(img.width, img.height, img.bytes)
-            .expect("Failed to create the modified image from bytes"),
-    );
-
-    Ok(modified_image)
-}
-
 /// Apply a Gaussian blur to an image using libcudaimg.
 ///
 /// # Arguments
@@ -521,6 +480,38 @@ pub fn gaussian_blur(
             img.width * img.pixel_size,
             img.height,
             sigma,
+        );
+    }
+
+    // Create a new image from the modified bytes
+    let modified_image = image::DynamicImage::ImageRgb8(
+        image::RgbImage::from_raw(img.width, img.height, img.bytes)
+            .expect("Failed to create the modified image from bytes"),
+    );
+
+    Ok(modified_image)
+}
+
+pub fn sobel_edge_detection(
+    libcudaimg: &Library,
+    image: &DynamicImage,
+) -> anyhow::Result<DynamicImage> {
+    // Get the gaussianBlur function from the library
+    let process_image: Symbol<SobelEdgeDetectionFn> =
+        unsafe { libcudaimg.get(b"sobelEdgeDetection\0")? };
+
+    // Get the image data
+    let mut img = image.to_cuda_image_data();
+
+    info!("Image width: {}, height: {}", img.width, img.height);
+
+    // Call the gaussianBlur function
+    unsafe {
+        process_image(
+            img.bytes.as_mut_ptr(),
+            img.raw_len,
+            img.width * img.pixel_size,
+            img.height,
         );
     }
 

@@ -543,6 +543,53 @@ impl MyApp {
                             0.1..=5.0,
                         ));
                     });
+
+                    // Sobel edge detection
+                    if ui.button("Sobel edge detection").clicked() {
+                        self.texture_map.modified_image = None;
+
+                        let tx = self.tx.clone();
+                        let op_in_progress = Arc::clone(&self.op_in_progress);
+
+                        let image = self.image.clone(); // TODO: avoid clone
+                        let library = Arc::clone(&self.libcudaimg);
+
+                        tokio::spawn(async move {
+                            // Wait for the previous operation to finish
+                            while *op_in_progress.lock().unwrap() {
+                                tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                            }
+
+                            {
+                                *op_in_progress.lock().unwrap() = true;
+                            }
+
+                            if let Some(image) = image {
+                                let library = library.lock().await;
+
+                                let start = std::time::Instant::now();
+                                let modified_image =
+                                    crate::cudaimg::sobel_edge_detection(&library, &image)
+                                        .expect("Failed to use Sobel edge detection on image");
+
+                                // TODO do not panic on fail but show a message and set the op_in_progress to false on tokio tasks
+
+                                let duration = start.elapsed();
+                                tx.send(ImageProcessingTask::OperationFinished {
+                                    image: modified_image,
+                                    duration,
+                                })
+                                .await
+                                .unwrap();
+                            }
+
+                            {
+                                *op_in_progress.lock().unwrap() = false;
+                            }
+                        });
+
+                        ui.close_menu();
+                    }
                 });
 
                 // Display the duration of the last operation
