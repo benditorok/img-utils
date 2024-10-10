@@ -28,6 +28,8 @@ struct ImageModifiers {
     pub gamma: f32,
     pub log_base: f32,
     pub box_filter_size: u32,
+    pub gauss_filter_size: u32,
+    pub gauss_sigma: f32,
 }
 
 impl Default for ImageModifiers {
@@ -36,6 +38,8 @@ impl Default for ImageModifiers {
             gamma: 2.2,
             log_base: 10.0,
             box_filter_size: 3,
+            gauss_filter_size: 3,
+            gauss_sigma: 1.0,
         }
     }
 }

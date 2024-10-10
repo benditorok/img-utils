@@ -35,6 +35,16 @@ type BalanceHistogramFn =
 type BoxFilterFn =
     unsafe extern "C" fn(image: *mut u8, image_len: u32, width: u32, height: u32, filter_size: u32);
 
+// Definition of the gaussFilter function from libcudaimg.
+type GaussFilterFn = unsafe extern "C" fn(
+    image: *mut u8,
+    image_len: u32,
+    width: u32,
+    height: u32,
+    filter_size: u32,
+    sigma: f32,
+);
+
 /// Trait to convert an image to CudaImageData.
 pub trait ToCudaImageData {
     fn to_cuda_image_data(&self) -> CudaImageData;
@@ -416,6 +426,41 @@ pub fn box_filter(
             img.width * img.pixel_size,
             img.height,
             filter_size,
+        );
+    }
+
+    // Create a new image from the modified bytes
+    let modified_image = image::DynamicImage::ImageRgb8(
+        image::RgbImage::from_raw(img.width, img.height, img.bytes)
+            .expect("Failed to create the modified image from bytes"),
+    );
+
+    Ok(modified_image)
+}
+
+pub fn gauss_filter(
+    libcudaimg: &Library,
+    image: &DynamicImage,
+    filter_size: u32,
+    sigma: f32,
+) -> anyhow::Result<DynamicImage> {
+    // Get the invertImage function from the library
+    let process_image: Symbol<GaussFilterFn> = unsafe { libcudaimg.get(b"gaussFilter\0")? };
+
+    // Get the image data
+    let mut img = image.to_cuda_image_data();
+
+    info!("Image width: {}, height: {}", img.width, img.height);
+
+    // Call the gaussFilter function
+    unsafe {
+        process_image(
+            img.bytes.as_mut_ptr(),
+            img.raw_len,
+            img.width * img.pixel_size,
+            img.height,
+            filter_size,
+            sigma,
         );
     }
 

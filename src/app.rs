@@ -231,9 +231,8 @@ impl MyApp {
                             ui.close_menu();
                         }
 
-                        ui.label("Gamma value");
-
                         // Gamma slider
+                        ui.label("Gamma");
                         ui.add(egui::Slider::new(
                             &mut self.image_modifiers.gamma,
                             0.1..=5.0,
@@ -291,9 +290,8 @@ impl MyApp {
                             ui.close_menu();
                         }
 
-                        ui.label("Logarithmic base value");
-
                         // Logarithmic base slider
+                        ui.label("Base");
                         ui.add(egui::Slider::new(
                             &mut self.image_modifiers.log_base,
                             0.1..=100f32,
@@ -486,12 +484,78 @@ impl MyApp {
                             ui.close_menu();
                         }
 
-                        ui.label("Box filter size");
-
                         // Box filter size slider
+                        ui.label("Filter size");
                         ui.add(egui::Slider::new(
                             &mut self.image_modifiers.box_filter_size,
                             0u32..=80u32,
+                        ));
+                    });
+
+                    // Gauss filter
+                    ui.menu_button("Gauss filter", |ui| {
+                        if ui.button("Run").clicked() {
+                            self.texture_map.modified_image = None;
+
+                            let tx = self.tx.clone();
+                            let op_in_progress = Arc::clone(&self.op_in_progress);
+
+                            let image = self.image.clone(); // TODO: avoid clone
+                            let library = Arc::clone(&self.libcudaimg);
+                            let filter_size = self.image_modifiers.box_filter_size;
+                            let sigma = self.image_modifiers.gauss_sigma;
+
+                            tokio::spawn(async move {
+                                // Wait for the previous operation to finish
+                                while *op_in_progress.lock().unwrap() {
+                                    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                                }
+
+                                {
+                                    *op_in_progress.lock().unwrap() = true;
+                                }
+
+                                if let Some(image) = image {
+                                    let library = library.lock().await;
+
+                                    let start = std::time::Instant::now();
+                                    let modified_image = crate::cudaimg::gauss_filter(
+                                        &library,
+                                        &image,
+                                        filter_size,
+                                        sigma,
+                                    )
+                                    .expect("Failed to use Gauss filter on image");
+
+                                    let duration = start.elapsed();
+                                    tx.send(ImageProcessingTask::OperationFinished {
+                                        image: modified_image,
+                                        duration,
+                                    })
+                                    .await
+                                    .unwrap();
+                                }
+
+                                {
+                                    *op_in_progress.lock().unwrap() = false;
+                                }
+                            });
+
+                            ui.close_menu();
+                        }
+
+                        // Gauss filter size slider
+                        ui.label("Filter size");
+                        ui.add(egui::Slider::new(
+                            &mut self.image_modifiers.gauss_filter_size,
+                            0u32..=80u32,
+                        ));
+
+                        // Gauss sigma slider
+                        ui.label("Sigma");
+                        ui.add(egui::Slider::new(
+                            &mut self.image_modifiers.gauss_sigma,
+                            0.1..=10.0,
                         ));
                     });
                 });
