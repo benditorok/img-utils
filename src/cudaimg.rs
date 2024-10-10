@@ -36,10 +36,6 @@ type BoxFilterFn =
     unsafe extern "C" fn(image: *mut u8, image_len: u32, width: u32, height: u32, filter_size: u32);
 
 // Definition of the gaussFilter function from libcudaimg.
-type GaussFilterFn =
-    unsafe extern "C" fn(image: *mut u8, image_len: u32, width: u32, height: u32, sigma: f32);
-
-// Definition of the gaussFilter function from libcudaimg.
 type GaussianBlurFn =
     unsafe extern "C" fn(image: *mut u8, image_len: u32, width: u32, height: u32, sigma: f32);
 
@@ -510,7 +506,7 @@ pub fn gaussian_blur(
     sigma: f32,
 ) -> anyhow::Result<DynamicImage> {
     // Get the gaussianBlur function from the library
-    let process_image: Symbol<GaussFilterFn> = unsafe { libcudaimg.get(b"gaussianBlur\0")? };
+    let process_image: Symbol<GaussianBlurFn> = unsafe { libcudaimg.get(b"gaussianBlur\0")? };
 
     // Get the image data
     let mut img = image.to_cuda_image_data();
