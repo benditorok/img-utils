@@ -6,7 +6,6 @@ use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use tokio::sync::mpsc;
 use tokio::sync::Mutex as TokioMutex;
-use tokio::task;
 
 #[allow(unused)]
 pub struct MyApp {
@@ -194,7 +193,7 @@ impl MyApp {
 
                             let image = self.image.clone(); // TODO: avoid clone
                             let library = Arc::clone(&self.libcudaimg);
-                            let gamma = self.image_modifiers.gamma.clone();
+                            let gamma = self.image_modifiers.gamma;
 
                             tokio::spawn(async move {
                                 // Wait for the previous operation to finish
@@ -251,7 +250,7 @@ impl MyApp {
 
                             let image = self.image.clone(); // TODO: avoid clone
                             let library = Arc::clone(&self.libcudaimg);
-                            let log_base = self.image_modifiers.log_base.clone();
+                            let log_base = self.image_modifiers.log_base;
 
                             tokio::spawn(async move {
                                 // Wait for the previous operation to finish
@@ -447,7 +446,7 @@ impl MyApp {
 
                             let image = self.image.clone(); // TODO: avoid clone
                             let library = Arc::clone(&self.libcudaimg);
-                            let box_filter_size = self.image_modifiers.box_filter_size.clone();
+                            let box_filter_size = self.image_modifiers.box_filter_size;
 
                             tokio::spawn(async move {
                                 // Wait for the previous operation to finish
