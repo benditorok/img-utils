@@ -444,7 +444,7 @@ impl MyApp {
 
                             let image = self.image.clone(); // TODO: avoid clone
                             let library = Arc::clone(&self.libcudaimg);
-                            let box_filter_size = self.image_modifiers.box_filter_size;
+                            let filter_size = self.image_modifiers.box_filter_size;
 
                             tokio::spawn(async move {
                                 // Wait for the previous operation to finish
@@ -460,12 +460,9 @@ impl MyApp {
                                     let library = library.lock().await;
 
                                     let start = std::time::Instant::now();
-                                    let modified_image = crate::cudaimg::box_filter(
-                                        &library,
-                                        &image,
-                                        box_filter_size,
-                                    )
-                                    .expect("Failed to use Box filter on image");
+                                    let modified_image =
+                                        crate::cudaimg::box_filter(&library, &image, filter_size)
+                                            .expect("Failed to use Box filter on image");
 
                                     let duration = start.elapsed();
                                     tx.send(ImageProcessingTask::OperationFinished {

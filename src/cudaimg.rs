@@ -405,6 +405,17 @@ pub fn balance_image_histogram(
     Ok(modified_image)
 }
 
+/// Apply a box filter to an image using libcudaimg.
+///
+/// # Arguments
+///
+/// * `libcudaimg` - The libcudaimg library.
+/// * `image` - The image to filter.
+/// * `filter_size` - The size of the filter.
+///
+/// # Returns
+///
+/// * The filtered image.
 pub fn box_filter(
     libcudaimg: &Library,
     image: &DynamicImage,
@@ -438,6 +449,18 @@ pub fn box_filter(
     Ok(modified_image)
 }
 
+/// Apply a Gaussian filter to an image using libcudaimg.
+///
+/// # Arguments
+///
+/// * `libcudaimg` - The libcudaimg library.
+/// * `image` - The image to filter.
+/// * `filter_size` - The size of the filter.
+/// * `sigma` - The sigma value to use.
+///
+/// # Returns
+///
+/// * The filtered image.
 pub fn gauss_filter(
     libcudaimg: &Library,
     image: &DynamicImage,
