@@ -107,209 +107,27 @@ impl Default for CudaHistogramData {
     }
 }
 
-/// Invert an image using libcudaimg.
+/// Enum to represent the image processing functions.
 ///
-/// # Arguments
-///
-/// * `libcudaimg` - The libcudaimg library.
-/// * `image` - The image to invert.
-///
-/// # Returns
-///
-/// * The inverted image.
-pub fn invert_image(libcudaimg: &Library, image: &DynamicImage) -> anyhow::Result<DynamicImage> {
-    // Get the invertImage function from the library
-    let process_image: Symbol<InvertImageFn> = unsafe { libcudaimg.get(b"invertImage\0")? };
-
-    // Get the image data
-    let mut img = image.to_cuda_image_data();
-
-    info!("Image width: {}, height: {}", img.width, img.height);
-
-    // Call the invertImage function
-    unsafe {
-        process_image(
-            img.bytes.as_mut_ptr(),
-            img.raw_len,
-            img.width * img.pixel_size,
-            img.height,
-        );
-    }
-
-    // Create a new image from the modified bytes
-    let inverted_image = image::DynamicImage::ImageRgb8(
-        image::RgbImage::from_raw(img.width, img.height, img.bytes)
-            .expect("Failed to create the modified image from bytes"),
-    );
-
-    Ok(inverted_image)
-}
-
-/// Apply a gamma transformation to an image using libcudaimg.
-///
-/// # Arguments
-///
-/// * `libcudaimg` - The libcudaimg library.
-/// * `image` - The image to transform.
-/// * `gamma` - The gamma value to use.
-///
-/// # Returns
-///
-/// * The transformed image.
-pub fn gamma_transform_image(
-    libcudaimg: &Library,
-    image: &DynamicImage,
-    gamma: f32,
-) -> anyhow::Result<DynamicImage> {
-    // Get the gammaTransformImage function from the library
-    let process_image: Symbol<GammaTransformImage> =
-        unsafe { libcudaimg.get(b"gammaTransformImage\0")? };
-
-    // Get the image data
-    let mut img = image.to_cuda_image_data();
-
-    info!("Image width: {}, height: {}", img.width, img.height);
-
-    // Call the gammaTransformImage function
-    unsafe {
-        process_image(
-            img.bytes.as_mut_ptr(),
-            img.raw_len,
-            img.width * img.pixel_size,
-            img.height,
-            gamma,
-        );
-    }
-
-    // Create a new image from the modified bytes
-    let modified_image = image::DynamicImage::ImageRgb8(
-        image::RgbImage::from_raw(img.width, img.height, img.bytes)
-            .expect("Failed to create the modified image from bytes"),
-    );
-
-    Ok(modified_image)
-}
-
-/// Apply a logarithmic transformation to an image using libcudaimg.
-///
-/// # Arguments
-///
-/// * `libcudaimg` - The libcudaimg library.
-/// * `image` - The image to transform.
-/// * `base` - The base value to use.
-///
-/// # Returns
-///
-/// * The transformed image.
-pub fn logarithmic_transform_image(
-    libcudaimg: &Library,
-    image: &DynamicImage,
-    base: f32,
-) -> anyhow::Result<DynamicImage> {
-    // Get the logarithmicTransformImage function from the library
-    let process_image: Symbol<LogarithmicTransformImage> =
-        unsafe { libcudaimg.get(b"logarithmicTransformImage\0")? };
-
-    // Get the image data
-    let mut img = image.to_cuda_image_data();
-
-    info!("Image width: {}, height: {}", img.width, img.height);
-
-    // Call the logarithmicTransformImage function
-    unsafe {
-        process_image(
-            img.bytes.as_mut_ptr(),
-            img.raw_len,
-            img.width * img.pixel_size,
-            img.height,
-            base,
-        );
-    }
-
-    // Create a new image from the modified bytes
-    let modified_image = image::DynamicImage::ImageRgb8(
-        image::RgbImage::from_raw(img.width, img.height, img.bytes)
-            .expect("Failed to create the modified image from bytes"),
-    );
-
-    Ok(modified_image)
-}
-
-/// Convert an image to grayscale using libcudaimg.
-///     
-/// # Arguments
-///
-/// * `libcudaimg` - The libcudaimg library.
-/// * `image` - The image to convert.
-///
-/// # Returns
-///
-/// * The grayscale image.
-pub fn grayscale_image(libcudaimg: &Library, image: &DynamicImage) -> anyhow::Result<DynamicImage> {
-    // Get the grayscaleImage function from the library
-    let process_image: Symbol<GrayscaleImageFn> = unsafe { libcudaimg.get(b"grayscaleImage\0")? };
-
-    // Get the image data
-    let mut img = image.to_cuda_image_data();
-
-    info!("Image width: {}, height: {}", img.width, img.height);
-
-    // Call the grayscaleImage function
-    unsafe {
-        process_image(
-            img.bytes.as_mut_ptr(),
-            img.raw_len,
-            img.width * img.pixel_size,
-            img.height,
-        );
-    }
-
-    // Create a new image from the modified bytes
-    let inverted_image = image::DynamicImage::ImageRgb8(
-        image::RgbImage::from_raw(img.width, img.height, img.bytes)
-            .expect("Failed to create the modified image from bytes"),
-    );
-
-    Ok(inverted_image)
-}
-
-/// Compute the histogram of an image using libcudaimg.
-///
-/// # Arguments
-///
-/// * `libcudaimg` - The libcudaimg library.
-/// * `image` - The image to compute the histogram of.
-///
-/// # Returns
-///
-/// * The histogram data.
-pub fn compute_histogram(
-    libcudaimg: &Library,
-    image: &DynamicImage,
-) -> anyhow::Result<CudaHistogramData> {
-    // Get the computeHistogram function from the library
-    let process_image: Symbol<ComputeHistogramFn> =
-        unsafe { libcudaimg.get(b"computeHistogram\0")? };
-
-    let mut histogram = CudaHistogramData::default();
-
-    // Get the image data
-    let mut img = image.to_cuda_image_data();
-
-    info!("Image width: {}, height: {}", img.width, img.height);
-
-    // Call the computeHistogram function
-    unsafe {
-        process_image(
-            img.bytes.as_mut_ptr(),
-            img.raw_len,
-            histogram.data.as_mut_ptr(),
-            img.width * img.pixel_size,
-            img.height,
-        );
-    }
-
-    Ok(histogram)
+/// * `Invert` - Invert the image.
+/// * `GammaTransform` - Apply a gamma transformation to the image.
+/// * `LogarithmicTransform` - Apply a logarithmic transformation to the image.
+/// * `Grayscale` - Convert the image to grayscale.
+/// * `ComputeHistogram` - Compute the histogram of the image.
+/// * `BalanceHistogram` - Balance the histogram of the image.
+/// * `BoxFilter` - Apply a box filter to the image.
+/// * `GaussianBlur` - Apply a Gaussian blur to the image.
+/// * `SobelEdgeDetection` - Apply Sobel edge detection to the image.
+pub enum ImageProcessingFunction {
+    Invert,
+    GammaTransform(f32),
+    LogarithmicTransform(f32),
+    Grayscale,
+    ComputeHistogram,
+    BalanceHistogram,
+    BoxFilter(u32),
+    GaussianBlur(f32),
+    SobelEdgeDetection,
 }
 
 /// Plot a histogram using plotters.
@@ -361,192 +179,15 @@ pub fn plot_histogram(histogram: &CudaHistogramData) -> anyhow::Result<DynamicIm
     Ok(img)
 }
 
-/// Balance the histogram of an image using libcudaimg.
+/// Process an image using a specified image processing function.
+/// The image is modified in place using the CUDA kernels.
+/// The modified image is returned as a DynamicImage.
 ///
 /// # Arguments
 ///
-/// * `libcudaimg` - The libcudaimg library.
-/// * `image` - The image to balance the histogram of.
-///
-/// # Returns
-///
-/// * The image with a balanced histogram.
-pub fn balance_image_histogram(
-    libcudaimg: &Library,
-    image: &DynamicImage,
-) -> anyhow::Result<DynamicImage> {
-    // Get the balanceHistogram function from the library
-    let process_image: Symbol<BalanceHistogramFn> =
-        unsafe { libcudaimg.get(b"balanceHistogram\0")? };
-
-    // Get the image data
-    let mut img = image.to_cuda_image_data();
-
-    info!("Image width: {}, height: {}", img.width, img.height);
-
-    // Call the balanceHistogram function
-    unsafe {
-        process_image(
-            img.bytes.as_mut_ptr(),
-            img.raw_len,
-            img.width * img.pixel_size,
-            img.height,
-        );
-    }
-
-    // Create a new image from the modified bytes
-    let modified_image = image::DynamicImage::ImageRgb8(
-        image::RgbImage::from_raw(img.width, img.height, img.bytes)
-            .expect("Failed to create the modified image from bytes"),
-    );
-
-    Ok(modified_image)
-}
-
-/// Apply a box filter to an image using libcudaimg.
-///
-/// # Arguments
-///
-/// * `libcudaimg` - The libcudaimg library.
-/// * `image` - The image to filter.
-/// * `filter_size` - The size of the filter.
-///
-/// # Returns
-///
-/// * The filtered image.
-pub fn box_filter(
-    libcudaimg: &Library,
-    image: &DynamicImage,
-    filter_size: u32,
-) -> anyhow::Result<DynamicImage> {
-    // Get the boxFilter function from the library
-    let process_image: Symbol<BoxFilterFn> = unsafe { libcudaimg.get(b"boxFilter\0")? };
-
-    // Get the image data
-    let mut img = image.to_cuda_image_data();
-
-    info!("Image width: {}, height: {}", img.width, img.height);
-
-    // Call the boxFilter function
-    unsafe {
-        process_image(
-            img.bytes.as_mut_ptr(),
-            img.raw_len,
-            img.width * img.pixel_size,
-            img.height,
-            filter_size,
-        );
-    }
-
-    // Create a new image from the modified bytes
-    let modified_image = image::DynamicImage::ImageRgb8(
-        image::RgbImage::from_raw(img.width, img.height, img.bytes)
-            .expect("Failed to create the modified image from bytes"),
-    );
-
-    Ok(modified_image)
-}
-
-/// Apply a Gaussian blur to an image using libcudaimg.
-///
-/// # Arguments
-///
-/// * `libcudaimg` - The libcudaimg library.
-/// * `image` - The image to filter.
-/// * `filter_size` - The size of the filter.
-/// * `sigma` - The sigma value to use.
-///
-/// # Returns
-///
-/// * The filtered image.
-pub fn gaussian_blur(
-    libcudaimg: &Library,
-    image: &DynamicImage,
-    sigma: f32,
-) -> anyhow::Result<DynamicImage> {
-    // Get the gaussianBlur function from the library
-    let process_image: Symbol<GaussianBlurFn> = unsafe { libcudaimg.get(b"gaussianBlur\0")? };
-
-    // Get the image data
-    let mut img = image.to_cuda_image_data();
-
-    info!("Image width: {}, height: {}", img.width, img.height);
-
-    // Call the gaussianBlur function
-    unsafe {
-        process_image(
-            img.bytes.as_mut_ptr(),
-            img.raw_len,
-            img.width * img.pixel_size,
-            img.height,
-            sigma,
-        );
-    }
-
-    // Create a new image from the modified bytes
-    let modified_image = image::DynamicImage::ImageRgb8(
-        image::RgbImage::from_raw(img.width, img.height, img.bytes)
-            .expect("Failed to create the modified image from bytes"),
-    );
-
-    Ok(modified_image)
-}
-
-pub fn sobel_edge_detection(
-    libcudaimg: &Library,
-    image: &DynamicImage,
-) -> anyhow::Result<DynamicImage> {
-    // Get the gaussianBlur function from the library
-    let process_image: Symbol<SobelEdgeDetectionFn> =
-        unsafe { libcudaimg.get(b"sobelEdgeDetection\0")? };
-
-    // Get the image data
-    let mut img = image.to_cuda_image_data();
-
-    info!("Image width: {}, height: {}", img.width, img.height);
-
-    // Call the gaussianBlur function
-    unsafe {
-        process_image(
-            img.bytes.as_mut_ptr(),
-            img.raw_len,
-            img.width * img.pixel_size,
-            img.height,
-        );
-    }
-
-    // Create a new image from the modified bytes
-    let modified_image = image::DynamicImage::ImageRgb8(
-        image::RgbImage::from_raw(img.width, img.height, img.bytes)
-            .expect("Failed to create the modified image from bytes"),
-    );
-
-    Ok(modified_image)
-}
-
-/// Enum to represent the image processing functions.
-///
-/// * `Invert` - Invert the image.
-/// * `GammaTransform` - Apply a gamma transformation to the image.
-/// * `LogarithmicTransform` - Apply a logarithmic transformation to the image.
-/// * `Grayscale` - Convert the image to grayscale.
-/// * `ComputeHistogram` - Compute the histogram of the image.
-/// * `BalanceHistogram` - Balance the histogram of the image.
-/// * `BoxFilter` - Apply a box filter to the image.
-/// * `GaussianBlur` - Apply a Gaussian blur to the image.
-/// * `SobelEdgeDetection` - Apply Sobel edge detection to the image.
-pub enum ImageProcessingFunction {
-    Invert,
-    GammaTransform(f32),
-    LogarithmicTransform(f32),
-    Grayscale,
-    ComputeHistogram,
-    BalanceHistogram,
-    BoxFilter(u32),
-    GaussianBlur(f32),
-    SobelEdgeDetection,
-}
-
+/// * `libcudaimg` - The libcudaimg library to use for image processing.
+/// * `image` - The image to process.
+/// * `function` - The image processing function to apply.
 pub fn process_image(
     libcudaimg: &Library,
     image: &DynamicImage,
