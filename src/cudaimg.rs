@@ -523,3 +523,172 @@ pub fn sobel_edge_detection(
 
     Ok(modified_image)
 }
+
+/// Enum to represent the image processing functions.
+///
+/// * `Invert` - Invert the image.
+/// * `GammaTransform` - Apply a gamma transformation to the image.
+/// * `LogarithmicTransform` - Apply a logarithmic transformation to the image.
+/// * `Grayscale` - Convert the image to grayscale.
+/// * `ComputeHistogram` - Compute the histogram of the image.
+/// * `BalanceHistogram` - Balance the histogram of the image.
+/// * `BoxFilter` - Apply a box filter to the image.
+/// * `GaussianBlur` - Apply a Gaussian blur to the image.
+/// * `SobelEdgeDetection` - Apply Sobel edge detection to the image.
+pub enum ImageProcessingFunction {
+    Invert,
+    GammaTransform(f32),
+    LogarithmicTransform(f32),
+    Grayscale,
+    ComputeHistogram,
+    BalanceHistogram,
+    BoxFilter(u32),
+    GaussianBlur(f32),
+    SobelEdgeDetection,
+}
+
+pub fn process_image(
+    libcudaimg: &Library,
+    image: &DynamicImage,
+    function: ImageProcessingFunction,
+) -> anyhow::Result<DynamicImage> {
+    // Get the image data
+    let mut img = image.to_cuda_image_data();
+
+    info!("Image width: {}, height: {}", img.width, img.height);
+
+    match function {
+        ImageProcessingFunction::Invert => {
+            let process_image: Symbol<InvertImageFn> = unsafe { libcudaimg.get(b"invertImage\0")? };
+            unsafe {
+                process_image(
+                    img.bytes.as_mut_ptr(),
+                    img.raw_len,
+                    img.width * img.pixel_size,
+                    img.height,
+                );
+            }
+        }
+        ImageProcessingFunction::GammaTransform(gamma) => {
+            let process_image: Symbol<GammaTransformImage> =
+                unsafe { libcudaimg.get(b"gammaTransformImage\0")? };
+
+            unsafe {
+                process_image(
+                    img.bytes.as_mut_ptr(),
+                    img.raw_len,
+                    img.width * img.pixel_size,
+                    img.height,
+                    gamma,
+                );
+            }
+        }
+        ImageProcessingFunction::LogarithmicTransform(base) => {
+            let process_image: Symbol<LogarithmicTransformImage> =
+                unsafe { libcudaimg.get(b"logarithmicTransformImage\0")? };
+
+            unsafe {
+                process_image(
+                    img.bytes.as_mut_ptr(),
+                    img.raw_len,
+                    img.width * img.pixel_size,
+                    img.height,
+                    base,
+                );
+            }
+        }
+        ImageProcessingFunction::Grayscale => {
+            let process_image: Symbol<GrayscaleImageFn> =
+                unsafe { libcudaimg.get(b"grayscaleImage\0")? };
+
+            unsafe {
+                process_image(
+                    img.bytes.as_mut_ptr(),
+                    img.raw_len,
+                    img.width * img.pixel_size,
+                    img.height,
+                );
+            }
+        }
+        ImageProcessingFunction::ComputeHistogram => {
+            let process_image: Symbol<ComputeHistogramFn> =
+                unsafe { libcudaimg.get(b"computeHistogram\0")? };
+
+            let mut histogram = CudaHistogramData::default();
+
+            unsafe {
+                process_image(
+                    img.bytes.as_mut_ptr(),
+                    img.raw_len,
+                    histogram.data.as_mut_ptr(),
+                    img.width * img.pixel_size,
+                    img.height,
+                );
+            }
+
+            // Return explicitly to avoid creating a new image from the modified bytes
+            return plot_histogram(&histogram);
+        }
+        ImageProcessingFunction::BalanceHistogram => {
+            let process_image: Symbol<BalanceHistogramFn> =
+                unsafe { libcudaimg.get(b"balanceHistogram\0")? };
+
+            unsafe {
+                process_image(
+                    img.bytes.as_mut_ptr(),
+                    img.raw_len,
+                    img.width * img.pixel_size,
+                    img.height,
+                );
+            }
+        }
+        ImageProcessingFunction::BoxFilter(filter_size) => {
+            let process_image: Symbol<BoxFilterFn> = unsafe { libcudaimg.get(b"boxFilter\0")? };
+
+            unsafe {
+                process_image(
+                    img.bytes.as_mut_ptr(),
+                    img.raw_len,
+                    img.width * img.pixel_size,
+                    img.height,
+                    filter_size,
+                );
+            }
+        }
+        ImageProcessingFunction::GaussianBlur(sigma) => {
+            let process_image: Symbol<GaussianBlurFn> =
+                unsafe { libcudaimg.get(b"gaussianBlur\0")? };
+
+            unsafe {
+                process_image(
+                    img.bytes.as_mut_ptr(),
+                    img.raw_len,
+                    img.width * img.pixel_size,
+                    img.height,
+                    sigma,
+                );
+            }
+        }
+        ImageProcessingFunction::SobelEdgeDetection => {
+            let process_image: Symbol<SobelEdgeDetectionFn> =
+                unsafe { libcudaimg.get(b"sobelEdgeDetection\0")? };
+
+            unsafe {
+                process_image(
+                    img.bytes.as_mut_ptr(),
+                    img.raw_len,
+                    img.width * img.pixel_size,
+                    img.height,
+                );
+            }
+        }
+    };
+
+    // Create a new image from the modified bytes
+    let modified_image = image::DynamicImage::ImageRgb8(
+        image::RgbImage::from_raw(img.width, img.height, img.bytes)
+            .expect("Failed to create the modified image from bytes"),
+    );
+
+    Ok(modified_image)
+}

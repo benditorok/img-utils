@@ -1,3 +1,4 @@
+use crate::cudaimg::ImageProcessingFunction;
 use crate::{ImageModifiers, ImageProcessingTask, ShowResizedTexture, TextureMap, ToColorImage};
 use image::DynamicImage;
 use libloading::Library;
@@ -63,9 +64,7 @@ impl MyApp {
                                 tokio::time::sleep(std::time::Duration::from_millis(100)).await;
                             }
 
-                            {
-                                *op_in_progress.lock().unwrap() = true;
-                            }
+                            *op_in_progress.lock().unwrap() = true;
 
                             if let Some(path) = FileDialog::new()
                                 .add_filter("Image Files", &["jpg", "jpeg", "png"])
@@ -77,9 +76,7 @@ impl MyApp {
                                     .unwrap();
                             }
 
-                            {
-                                *op_in_progress.lock().unwrap() = false;
-                            }
+                            *op_in_progress.lock().unwrap() = false;
                         });
 
                         ui.close_menu();
@@ -99,9 +96,7 @@ impl MyApp {
                                     tokio::time::sleep(std::time::Duration::from_millis(100)).await;
                                 }
 
-                                {
-                                    *op_in_progress.lock().unwrap() = true;
-                                }
+                                *op_in_progress.lock().unwrap() = true;
 
                                 if let Some(image) = modified_image {
                                     let exts = if let Some(impath) = &image_path_info {
@@ -127,9 +122,7 @@ impl MyApp {
                                     }
                                 }
 
-                                {
-                                    *op_in_progress.lock().unwrap() = false;
-                                }
+                                *op_in_progress.lock().unwrap() = false;
                             });
                         }
 
@@ -155,16 +148,19 @@ impl MyApp {
                                 tokio::time::sleep(std::time::Duration::from_millis(100)).await;
                             }
 
-                            {
-                                *op_in_progress.lock().unwrap() = true;
-                            }
+                            *op_in_progress.lock().unwrap() = true;
 
                             if let Some(image) = image {
                                 let library = library.lock().await;
 
                                 let start = std::time::Instant::now();
-                                let modified_image = crate::cudaimg::invert_image(&library, &image)
-                                    .expect("Failed to invert image");
+
+                                let modified_image = crate::cudaimg::process_image(
+                                    &library,
+                                    &image,
+                                    ImageProcessingFunction::Invert,
+                                )
+                                .expect("Failed to invert image");
 
                                 let duration = start.elapsed();
                                 tx.send(ImageProcessingTask::OperationFinished {
@@ -175,9 +171,7 @@ impl MyApp {
                                 .unwrap();
                             }
 
-                            {
-                                *op_in_progress.lock().unwrap() = false;
-                            }
+                            *op_in_progress.lock().unwrap() = false;
                         });
 
                         ui.close_menu();
@@ -201,16 +195,17 @@ impl MyApp {
                                     tokio::time::sleep(std::time::Duration::from_millis(100)).await;
                                 }
 
-                                {
-                                    *op_in_progress.lock().unwrap() = true;
-                                }
+                                *op_in_progress.lock().unwrap() = true;
 
                                 if let Some(image) = image {
                                     let library = library.lock().await;
 
                                     let start = std::time::Instant::now();
-                                    let modified_image = crate::cudaimg::gamma_transform_image(
-                                        &library, &image, gamma,
+
+                                    let modified_image = crate::cudaimg::process_image(
+                                        &library,
+                                        &image,
+                                        ImageProcessingFunction::GammaTransform(gamma),
                                     )
                                     .expect("Failed to use gamma transformation on image");
 
@@ -223,9 +218,7 @@ impl MyApp {
                                     .unwrap();
                                 }
 
-                                {
-                                    *op_in_progress.lock().unwrap() = false;
-                                }
+                                *op_in_progress.lock().unwrap() = false;
                             });
 
                             ui.close_menu();
@@ -257,21 +250,19 @@ impl MyApp {
                                     tokio::time::sleep(std::time::Duration::from_millis(100)).await;
                                 }
 
-                                {
-                                    *op_in_progress.lock().unwrap() = true;
-                                }
+                                *op_in_progress.lock().unwrap() = true;
 
                                 if let Some(image) = image {
                                     let library = library.lock().await;
 
                                     let start = std::time::Instant::now();
-                                    let modified_image =
-                                        crate::cudaimg::logarithmic_transform_image(
-                                            &library, &image, log_base,
-                                        )
-                                        .expect(
-                                            "Failed to use logarithmic transformation on image",
-                                        );
+
+                                    let modified_image = crate::cudaimg::process_image(
+                                        &library,
+                                        &image,
+                                        ImageProcessingFunction::LogarithmicTransform(log_base),
+                                    )
+                                    .expect("Failed to use Logarithmic transformation on image");
 
                                     let duration = start.elapsed();
                                     tx.send(ImageProcessingTask::OperationFinished {
@@ -282,9 +273,7 @@ impl MyApp {
                                     .unwrap();
                                 }
 
-                                {
-                                    *op_in_progress.lock().unwrap() = false;
-                                }
+                                *op_in_progress.lock().unwrap() = false;
                             });
 
                             ui.close_menu();
@@ -314,17 +303,19 @@ impl MyApp {
                                 tokio::time::sleep(std::time::Duration::from_millis(100)).await;
                             }
 
-                            {
-                                *op_in_progress.lock().unwrap() = true;
-                            }
+                            *op_in_progress.lock().unwrap() = true;
 
                             if let Some(image) = image {
                                 let library = library.lock().await;
 
                                 let start = std::time::Instant::now();
-                                let modified_image =
-                                    crate::cudaimg::grayscale_image(&library, &image)
-                                        .expect("Failed to convert to grayscale");
+
+                                let modified_image = crate::cudaimg::process_image(
+                                    &library,
+                                    &image,
+                                    ImageProcessingFunction::Grayscale,
+                                )
+                                .expect("Failed to convert to grayscale");
 
                                 let duration = start.elapsed();
                                 tx.send(ImageProcessingTask::OperationFinished {
@@ -335,9 +326,7 @@ impl MyApp {
                                 .unwrap();
                             }
 
-                            {
-                                *op_in_progress.lock().unwrap() = false;
-                            }
+                            *op_in_progress.lock().unwrap() = false;
                         });
 
                         ui.close_menu();
@@ -359,18 +348,19 @@ impl MyApp {
                                 tokio::time::sleep(std::time::Duration::from_millis(100)).await;
                             }
 
-                            {
-                                *op_in_progress.lock().unwrap() = true;
-                            }
+                            *op_in_progress.lock().unwrap() = true;
 
                             if let Some(image) = image {
                                 let library = library.lock().await;
 
                                 let start = std::time::Instant::now();
-                                let histogram = crate::cudaimg::compute_histogram(&library, &image)
-                                    .expect("Failed to generate histogram");
-                                let histogram = crate::cudaimg::plot_histogram(&histogram)
-                                    .expect("Failed to plot histogram");
+
+                                let histogram = crate::cudaimg::process_image(
+                                    &library,
+                                    &image,
+                                    ImageProcessingFunction::ComputeHistogram,
+                                )
+                                .expect("Failed to generate histogram");
 
                                 let duration = start.elapsed();
                                 tx.send(ImageProcessingTask::OperationFinished {
@@ -381,9 +371,7 @@ impl MyApp {
                                 .unwrap();
                             }
 
-                            {
-                                *op_in_progress.lock().unwrap() = false;
-                            }
+                            *op_in_progress.lock().unwrap() = false;
                         });
 
                         ui.close_menu();
@@ -405,17 +393,19 @@ impl MyApp {
                                 tokio::time::sleep(std::time::Duration::from_millis(100)).await;
                             }
 
-                            {
-                                *op_in_progress.lock().unwrap() = true;
-                            }
+                            *op_in_progress.lock().unwrap() = true;
 
                             if let Some(image) = image {
                                 let library = library.lock().await;
 
                                 let start = std::time::Instant::now();
-                                let modified_image =
-                                    crate::cudaimg::balance_image_histogram(&library, &image)
-                                        .expect("Failed to balance histogram");
+
+                                let modified_image = crate::cudaimg::process_image(
+                                    &library,
+                                    &image,
+                                    ImageProcessingFunction::BalanceHistogram,
+                                )
+                                .expect("Failed to balance histogram");
 
                                 let duration = start.elapsed();
                                 tx.send(ImageProcessingTask::OperationFinished {
@@ -426,9 +416,7 @@ impl MyApp {
                                 .unwrap();
                             }
 
-                            {
-                                *op_in_progress.lock().unwrap() = false;
-                            }
+                            *op_in_progress.lock().unwrap() = false;
                         });
 
                         ui.close_menu();
@@ -452,17 +440,19 @@ impl MyApp {
                                     tokio::time::sleep(std::time::Duration::from_millis(100)).await;
                                 }
 
-                                {
-                                    *op_in_progress.lock().unwrap() = true;
-                                }
+                                *op_in_progress.lock().unwrap() = true;
 
                                 if let Some(image) = image {
                                     let library = library.lock().await;
 
                                     let start = std::time::Instant::now();
-                                    let modified_image =
-                                        crate::cudaimg::box_filter(&library, &image, filter_size)
-                                            .expect("Failed to use Box filter on image");
+
+                                    let modified_image = crate::cudaimg::process_image(
+                                        &library,
+                                        &image,
+                                        ImageProcessingFunction::BoxFilter(filter_size),
+                                    )
+                                    .expect("Failed to use Box filter on image");
 
                                     let duration = start.elapsed();
                                     tx.send(ImageProcessingTask::OperationFinished {
@@ -473,9 +463,7 @@ impl MyApp {
                                     .unwrap();
                                 }
 
-                                {
-                                    *op_in_progress.lock().unwrap() = false;
-                                }
+                                *op_in_progress.lock().unwrap() = false;
                             });
 
                             ui.close_menu();
@@ -507,17 +495,19 @@ impl MyApp {
                                     tokio::time::sleep(std::time::Duration::from_millis(100)).await;
                                 }
 
-                                {
-                                    *op_in_progress.lock().unwrap() = true;
-                                }
+                                *op_in_progress.lock().unwrap() = true;
 
                                 if let Some(image) = image {
                                     let library = library.lock().await;
 
                                     let start = std::time::Instant::now();
-                                    let modified_image =
-                                        crate::cudaimg::gaussian_blur(&library, &image, sigma)
-                                            .expect("Failed to use Gaussian blur on image");
+
+                                    let modified_image = crate::cudaimg::process_image(
+                                        &library,
+                                        &image,
+                                        ImageProcessingFunction::GaussianBlur(sigma),
+                                    )
+                                    .expect("Failed to use Gaussian blur on image");
 
                                     let duration = start.elapsed();
                                     tx.send(ImageProcessingTask::OperationFinished {
@@ -528,9 +518,7 @@ impl MyApp {
                                     .unwrap();
                                 }
 
-                                {
-                                    *op_in_progress.lock().unwrap() = false;
-                                }
+                                *op_in_progress.lock().unwrap() = false;
                             });
 
                             ui.close_menu();
@@ -560,17 +548,18 @@ impl MyApp {
                                 tokio::time::sleep(std::time::Duration::from_millis(100)).await;
                             }
 
-                            {
-                                *op_in_progress.lock().unwrap() = true;
-                            }
+                            *op_in_progress.lock().unwrap() = true;
 
                             if let Some(image) = image {
                                 let library = library.lock().await;
 
                                 let start = std::time::Instant::now();
-                                let modified_image =
-                                    crate::cudaimg::sobel_edge_detection(&library, &image)
-                                        .expect("Failed to use Sobel edge detection on image");
+                                let modified_image = crate::cudaimg::process_image(
+                                    &library,
+                                    &image,
+                                    ImageProcessingFunction::SobelEdgeDetection,
+                                )
+                                .expect("Failed to use Sobel edge detection on image");
 
                                 // TODO do not panic on fail but show a message and set the op_in_progress to false on tokio tasks
 
@@ -583,9 +572,7 @@ impl MyApp {
                                 .unwrap();
                             }
 
-                            {
-                                *op_in_progress.lock().unwrap() = false;
-                            }
+                            *op_in_progress.lock().unwrap() = false;
                         });
 
                         ui.close_menu();
