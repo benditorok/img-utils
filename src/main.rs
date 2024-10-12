@@ -1,7 +1,10 @@
+//#![windows_subsystem = "windows"]
+
 use libloading::Library;
 use std::path::Path;
 
-fn main() -> anyhow::Result<()> {
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
     env_logger::init();
 
     // Load the libcudaimg library
@@ -14,11 +17,13 @@ fn main() -> anyhow::Result<()> {
         ..Default::default()
     };
 
-    let _ = eframe::run_native(
+    if let Err(e) = eframe::run_native(
         "Image Processing Utility",
         options,
         Box::new(|_cc| Ok(Box::new(img_utils::app::MyApp::new(libcudaimg)))),
-    );
+    ) {
+        eprintln!("Failed to run eframe native: {:?}", e);
+    }
 
     Ok(())
 }

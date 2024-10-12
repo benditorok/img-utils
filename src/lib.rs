@@ -1,6 +1,6 @@
 use egui::{ColorImage, ImageSource, TextureHandle};
 use image::DynamicImage;
-use std::{borrow::Cow, sync::Arc};
+use std::{borrow::Cow, path::PathBuf, sync::Arc};
 
 pub mod app;
 pub mod cudaimg;
@@ -27,13 +27,17 @@ struct TextureMap {
 struct ImageModifiers {
     pub gamma: f32,
     pub log_base: f32,
+    pub box_filter_size: u32,
+    pub gauss_sigma: f32,
 }
 
 impl Default for ImageModifiers {
     fn default() -> Self {
         Self {
             gamma: 2.2,
-            log_base: 10.0,
+            log_base: 2f32,
+            box_filter_size: 3,
+            gauss_sigma: 1.0,
         }
     }
 }
@@ -103,4 +107,15 @@ impl ShowResizedTexture for egui::Ui {
 
         self.allocate_space(desired_size);
     }
+}
+
+enum ImageProcessingTask {
+    OpenImage {
+        image: image::DynamicImage,
+        path: PathBuf,
+    },
+    OperationFinished {
+        image: image::DynamicImage,
+        duration: std::time::Duration,
+    },
 }
