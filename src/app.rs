@@ -577,6 +577,50 @@ impl MyApp {
 
                         ui.close_menu();
                     }
+
+                    // Laplace edge detection
+                    if ui.button("Laplace edge detection").clicked() {
+                        self.texture_map.modified_image = None;
+
+                        let tx = self.tx.clone();
+                        let op_in_progress = Arc::clone(&self.op_in_progress);
+
+                        let image = self.image.clone(); // TODO: avoid clone
+                        let library = Arc::clone(&self.libcudaimg);
+
+                        tokio::spawn(async move {
+                            // Wait for the previous operation to finish
+                            while *op_in_progress.lock().unwrap() {
+                                tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                            }
+
+                            *op_in_progress.lock().unwrap() = true;
+
+                            if let Some(image) = image {
+                                let library = library.lock().await;
+
+                                let start = std::time::Instant::now();
+                                let modified_image = crate::cudaimg::process_image(
+                                    &library,
+                                    &image,
+                                    ImageProcessingFunction::LaplaceEdgeDetection,
+                                )
+                                .expect("Failed to use Laplace edge detection on image");
+
+                                let duration = start.elapsed();
+                                tx.send(ImageProcessingTask::OperationFinished {
+                                    image: modified_image,
+                                    duration,
+                                })
+                                .await
+                                .unwrap();
+                            }
+
+                            *op_in_progress.lock().unwrap() = false;
+                        });
+
+                        ui.close_menu();
+                    }
                 });
 
                 // Display the duration of the last operation

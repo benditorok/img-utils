@@ -43,6 +43,10 @@ type GaussianBlurFn =
 type SobelEdgeDetectionFn =
     unsafe extern "C" fn(image: *mut u8, image_len: u32, width: u32, height: u32);
 
+/// Definition of the laplaceEdgeDetection function from libcudaimg.
+type LaplaceEdgeDetectionFn =
+    unsafe extern "C" fn(image: *mut u8, image_len: u32, width: u32, height: u32);
+
 /// Trait to convert an image to CudaImageData.
 pub trait ToCudaImageData {
     fn to_cuda_image_data(&self) -> CudaImageData;
@@ -128,6 +132,7 @@ pub enum ImageProcessingFunction {
     BoxFilter(u32),
     GaussianBlur(f32),
     SobelEdgeDetection,
+    LaplaceEdgeDetection,
 }
 
 /// Plot a histogram using plotters.
@@ -313,6 +318,19 @@ pub fn process_image(
         ImageProcessingFunction::SobelEdgeDetection => {
             let process_image: Symbol<SobelEdgeDetectionFn> =
                 unsafe { libcudaimg.get(b"sobelEdgeDetection\0")? };
+
+            unsafe {
+                process_image(
+                    img.bytes.as_mut_ptr(),
+                    img.raw_len,
+                    img.width * img.pixel_size,
+                    img.height,
+                );
+            }
+        }
+        ImageProcessingFunction::LaplaceEdgeDetection => {
+            let process_image: Symbol<LaplaceEdgeDetectionFn> =
+                unsafe { libcudaimg.get(b"laplaceEdgeDetection\0")? };
 
             unsafe {
                 process_image(
