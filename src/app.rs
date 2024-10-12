@@ -283,7 +283,7 @@ impl MyApp {
                         ui.label("Base");
                         ui.add(egui::Slider::new(
                             &mut self.image_modifiers.log_base,
-                            0.1..=100f32,
+                            0.1f32..=10f32,
                         ));
                     });
 
@@ -606,6 +606,51 @@ impl MyApp {
                                     ImageProcessingFunction::LaplaceEdgeDetection,
                                 )
                                 .expect("Failed to use Laplace edge detection on image");
+
+                                let duration = start.elapsed();
+                                tx.send(ImageProcessingTask::OperationFinished {
+                                    image: modified_image,
+                                    duration,
+                                })
+                                .await
+                                .unwrap();
+                            }
+
+                            *op_in_progress.lock().unwrap() = false;
+                        });
+
+                        ui.close_menu();
+                    }
+
+                    // Harris corner detection
+                    if ui.button("Harris corner detection").clicked() {
+                        self.texture_map.modified_image = None;
+
+                        let tx = self.tx.clone();
+                        let op_in_progress = Arc::clone(&self.op_in_progress);
+
+                        let image = self.image.clone(); // TODO: avoid clone
+                        let library = Arc::clone(&self.libcudaimg);
+
+                        tokio::spawn(async move {
+                            // Wait for the previous operation to finish
+                            while *op_in_progress.lock().unwrap() {
+                                tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                            }
+
+                            // Runs Grayscale conversion, Gaussian blur (sigma=1) and then does Harris corner detection.
+                            *op_in_progress.lock().unwrap() = true;
+
+                            if let Some(image) = image {
+                                let library = library.lock().await;
+
+                                let start = std::time::Instant::now();
+                                let modified_image = crate::cudaimg::process_image(
+                                    &library,
+                                    &image,
+                                    ImageProcessingFunction::HarrisCornerDetection,
+                                )
+                                .expect("Failed to use Harris corner detection on image");
 
                                 let duration = start.elapsed();
                                 tx.send(ImageProcessingTask::OperationFinished {

@@ -35,7 +35,7 @@ impl Default for ImageModifiers {
     fn default() -> Self {
         Self {
             gamma: 2.2,
-            log_base: 10.0,
+            log_base: 2f32,
             box_filter_size: 3,
             gauss_sigma: 1.0,
         }
