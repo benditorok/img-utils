@@ -21,6 +21,9 @@ This project currently runs only on Windows. For the _libcudaimg_ library to bui
 - Histogram balancing
 - Box filter
 - Gaussian blur
+- Sobel edge detection
+- Laplace edge detection
+- Harris corner detection
 
 ## Requirements
 
